@@ -60,7 +60,6 @@ key_pos = [get_voltage(c) for c in chans]
 last_key_pos = [get_voltage(c) for c in chans]
 
 hammer_pos = [0.5 for _ in chans]
-last_hammer_pos = [0.5 for _ in chans]
 hammer_speed = [0 for _ in chans]
 note_on = [False for _ in chans]
 
@@ -84,7 +83,6 @@ while True:
 
         ### update key
         last_key_pos[j] = key_pos[j]
-        last_hammer_pos[j] = hammer_pos[j]
         key_pos[j] = get_voltage(chans[j])
         key_speed = (key_pos[j] - last_key_pos[j]) / elapsed
         # if i % 100 == 0:

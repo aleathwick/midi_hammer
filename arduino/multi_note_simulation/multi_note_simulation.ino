@@ -20,21 +20,36 @@ Adafruit_USBD_MIDI usb_midi;
 // and attach usb_midi as the transport.
 MIDI_CREATE_INSTANCE(Adafruit_USBD_MIDI, usb_midi, MIDI);
 
+
+// ADC and sensor set up
 const int adcCount = 2;  // n adcs
-int adcBits = 1024;
+const int adcBits = 1024;
 int adcSelects[] = { 17, 15 };     // pins for selecting adcs
 int adcSensorCounts[] = { 3, 3 };  // sensors per adc
-// last dimension must be of size max(adcSensorCounts)
+// last dimension must be at least of size max(adcSensorCounts)
 // may as well make it 8, the max possible
 int adcPins[][8] = { { 0, 1, 2 },
                      { 0, 1, 2 } };
 int adcNotes[][8] = { { 64, 65, 66 },
                       { 66, 67, 68 } };
-// i.e. key positions
+// define the range of the sensors, with sensorFullyOn being the key fully depressed
+const int sensorFullyOn = 128;
+const int sensorFullyOff = 512;
+
+// simulation parameters
+// threshold for hammer to activate note
+const int noteOnThreshold = sensorFullyOn + 0.1 * (sensorFullyOn - sensorFullyOff);
+// threshold for key to trigger noteoff
+const int noteOffThreshold = sensorFullyOn - 0.5 * (sensorFullyOn - sensorFullyOff);
+// gravity for hammer
+double gravity = (sensorFullyOn - sensorFullyOff) / (double)10000000;
+
+// keeping track of simulation states
+// key positions
 int adcValues[adcCount][8] = {0};
 int lastAdcValues[adcCount][8] = {0};
+double keySpeed = 0;
 double hammerPositions[adcCount][8] = {0};
-double lastHammerPositions[adcCount][8] = {0};
 double hammerSpeeds[adcCount][8] = {0};
 bool noteOn[adcCount][8] = {0};
 // can turn to int like so: int micros = microTimer[i][j];
@@ -76,6 +91,41 @@ void loop() {
         MIDI.sendNoteOn(adcNotes[i][j], adcs[i].readADC(adcPins[i][j]) * 127 / adcBits, 1);
         Serial.print(adcs[i].readADC(adcPins[i][j]));
         Serial.print(" ");
+
+        // update key position and speed
+        // don't need to store an array of last adc values...
+        lastAdcValues[i][j] = adcValues[i][j];
+        adcValues[i][j] = adcs[i].readADC(adcPins[i][j]);
+        keySpeed = (adcValues[i][j] - lastAdcValues[i][j]) / microTimer[i][j];
+
+        // update hammer position
+        // gravity should really be scaled by elapsed time
+        hammerPositions[i][j] = hammerPositions[i][j] - gravity;
+        // update according to hammer velocity
+        hammerPositions[i][j] = hammerPositions[i][j] + hammerSpeeds[i][j] * microTimer[i][j];
+
+        // hammer update based on interaction with key
+        // the sign in this if statement depends on configuration of sensors
+        if (hammerPositions[i][j] > adcValues[i][j]) {
+          hammerPositions[i][j] = adcValues[i][j];
+            if (hammerSpeeds[i][j] < keySpeed) {
+              hammerSpeeds[i][j] = keySpeed;
+            }    
+        }
+
+        // check for note ons
+
+        // check for note offs
+
+        // int adcValues[adcCount][8] = {0};
+        // int lastAdcValues[adcCount][8] = {0};
+        // double hammerPositions[adcCount][8] = {0};
+        // double hammerSpeeds[adcCount][8] = {0};
+        // bool noteOn[adcCount][8] = {0};
+
+
+        // this may produce a low estimate of key speed (not set to zero immediately on adc read)
+        microTimer[i][j] = 0;
       }
     }
     Serial.print("\n");

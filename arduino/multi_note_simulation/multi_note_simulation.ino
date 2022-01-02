@@ -33,7 +33,7 @@ int adcPins[][8] = { { 0, 1, 2 },
 int adcNotes[][8] = { { 64, 65, 66 },
                       { 66, 67, 68 } };
 // define the range of the sensors, with sensorFullyOn being the key fully depressed
-const int sensorFullyOn = 128;
+const int sensorFullyOn = 64;
 const int sensorFullyOff = 512;
 
 // simulation parameters
@@ -41,8 +41,8 @@ const int sensorFullyOff = 512;
 const int noteOnThreshold = sensorFullyOn + 0.1 * (sensorFullyOn - sensorFullyOff);
 // threshold for key to trigger noteoff
 const int noteOffThreshold = sensorFullyOn - 0.5 * (sensorFullyOn - sensorFullyOff);
-// gravity for hammer
-double gravity = (sensorFullyOn - sensorFullyOff) / (double)10000000;
+// gravity for hammer, measured in adc bits per microsecond
+double gravity = (sensorFullyOn - sensorFullyOff) / (double)200000000;
 
 // keeping track of simulation states
 // key positions
@@ -51,13 +51,17 @@ int lastAdcValues[adcCount][8] = {0};
 double keySpeed = 0;
 double hammerPositions[adcCount][8] = {0};
 double hammerSpeeds[adcCount][8] = {0};
-bool noteOn[adcCount][8] = {0};
-// can turn to int like so: int micros = microTimer[i][j];
-// and reset to zero: microTimer[i][j] = 0;
-elapsedMicros microTimer[adcCount][8];
+bool noteOns[adcCount][8] = {0};
+// can turn to int like so: int micros = elapsed[i][j];
+// and reset to zero: elapsed[i][j] = 0;
+elapsedMicros elapsed[adcCount][8];
+elapsedMillis infoTimer;
+bool printInfo = false;
+// whether to use print statements for plotting or text
+const bool plotSerial = true;
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(57600);
   // begin ADC
   // can set SPI default pins
   //  SPI.setCS(5);
@@ -71,6 +75,7 @@ void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
 
   usb_midi.setStringDescriptor("Laser Piano");
+  Serial.printf("noteOnThreshold: %d \n noteOffThreshold: %d \n gravity: %f \n", noteOnThreshold, noteOffThreshold, gravity);
 
   // Initialize MIDI, and listen to all MIDI channels
   // This will also call usb_midi's begin()
@@ -83,55 +88,75 @@ void setup() {
 }
 
 void loop() {
-  static uint32_t start_ms = 0;
-  if (millis() - start_ms > 266) {
-    for (int i = 0; i < adcCount; i++) {
-      for (int j = 0; j < adcSensorCounts[i]; j++) {
-        // use sendNoteOff for note offs
-        MIDI.sendNoteOn(adcNotes[i][j], adcs[i].readADC(adcPins[i][j]) * 127 / adcBits, 1);
-        Serial.print(adcs[i].readADC(adcPins[i][j]));
-        Serial.print(" ");
+  if (infoTimer >= 10) {
+    printInfo = true;
+    infoTimer = 0;
+    // Serial.print("\n");
+  } else {
+    printInfo = false;
+  }
 
+  for (int i = 0; i < adcCount; i++) {
+    for (int j = 0; j < adcSensorCounts[i]; j++) {
+      if (elapsed[i][j] >= 5) {
         // update key position and speed
         // don't need to store an array of last adc values...
         lastAdcValues[i][j] = adcValues[i][j];
         adcValues[i][j] = adcs[i].readADC(adcPins[i][j]);
-        keySpeed = (adcValues[i][j] - lastAdcValues[i][j]) / microTimer[i][j];
-
+        keySpeed = (adcValues[i][j] - lastAdcValues[i][j]) / (double)elapsed[i][j];
+        if (!plotSerial && printInfo && i == 0 && j == 0) {
+          Serial.printf("keySpeed: %f elapsed: %d  double elapsed: %f \n", keySpeed, (int)elapsed[i][j], (double)elapsed[i][j]);
+        }
         // update hammer position
         // gravity should really be scaled by elapsed time
-        hammerPositions[i][j] = hammerPositions[i][j] - gravity;
+        hammerSpeeds[i][j] = hammerSpeeds[i][j] - gravity * elapsed[i][j];
         // update according to hammer velocity
-        hammerPositions[i][j] = hammerPositions[i][j] + hammerSpeeds[i][j] * microTimer[i][j];
+        hammerPositions[i][j] = hammerPositions[i][j] + hammerSpeeds[i][j] * elapsed[i][j];
 
         // hammer update based on interaction with key
-        // the sign in this if statement depends on configuration of sensors
-        if (hammerPositions[i][j] > adcValues[i][j]) {
+        if ((hammerPositions[i][j] > adcValues[i][j]) == (sensorFullyOff > sensorFullyOn)) {
           hammerPositions[i][j] = adcValues[i][j];
-            if (hammerSpeeds[i][j] < keySpeed) {
+            // if (abs(hammerSpeeds[i][j]) < abs(keySpeed)) {
               hammerSpeeds[i][j] = keySpeed;
-            }    
+            // }
         }
 
         // check for note ons
+        if ((hammerPositions[i][j] < noteOnThreshold) == (sensorFullyOff > sensorFullyOn)) {
+          // do something with hammer speed to get velocity
+          double velocity = hammerSpeeds[i][j];
 
+          // MIDI.sendNoteOn(adcNotes[i][j], velocity, 1);
+          noteOns[i][j] = true;
+          // Serial.printf("\n note on: velocity %d on adc %d sensor %d \n", velocity, i, j);
+          hammerPositions[i][j] = noteOnThreshold;
+          hammerSpeeds[i][j] = -hammerSpeeds[i][j];
+          }
+        
         // check for note offs
+        if (noteOns[i][j]) {
+          if ((adcValues[i][j] > noteOnThreshold) == (sensorFullyOff > sensorFullyOn)) {
+            // could get key velocity for note off velocity
+            MIDI.sendNoteOff(adcNotes[i][j], 64, 1);
+            // Serial.printf("note off: velocity %d on adc %d sensor %d \n", 64, i, j);
+            noteOns[i][j] = false;
+          }
+        }
+        // finally, reset timer for this sensor
+        // doing this at end may produce a low estimate of key speed (not set to zero immediately on adc read)
+        elapsed[i][j] = 0;
 
-        // int adcValues[adcCount][8] = {0};
-        // int lastAdcValues[adcCount][8] = {0};
-        // double hammerPositions[adcCount][8] = {0};
-        // double hammerSpeeds[adcCount][8] = {0};
-        // bool noteOn[adcCount][8] = {0};
-
-
-        // this may produce a low estimate of key speed (not set to zero immediately on adc read)
-        microTimer[i][j] = 0;
+        // possibly print some stuff
+        if (!(plotSerial) && printInfo) {
+          Serial.printf("%d %f %f ", adcValues[i][j], hammerPositions[i][j], hammerSpeeds[i][j]);
+        }
       }
     }
-    Serial.print("\n");
-    // Serial.printf("%d, %d \n", adc1.readADC(0), adc1.readADC(1));
-
-    start_ms += 266;
+    if (plotSerial && printInfo){
+      // Serial.printf("%f\n", hammerPositions[0][0]);
+      // Serial.printf("hammer:%f\n", hammerPositions[0][0]);
+      Serial.printf("key:%d hammer:%f hammerSpeed:%f\n", adcValues[0][0], hammerPositions[0][0], abs(hammerSpeeds[0][0]) * 20000);
+    }
   }
 
   // read any new MIDI messages

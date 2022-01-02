@@ -114,3 +114,4 @@ while True:
         if note_on[j]:
             if key_pos[j] < NOTE_OFF_THRESHHOLD:
                 midi.send(adafruit_midi.note_off.NoteOff(NOTE_PITCHES[j], 54))
+                note_on[j] = False

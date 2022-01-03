@@ -8,6 +8,9 @@
 #include <MIDI.h>
 // elapsedMillis: https://github.com/pfeerick/elapsedMillis
 #include <elapsedMillis.h>
+// for log
+#include <math.h>
+
 
 
 // ADCs
@@ -68,6 +71,7 @@ elapsedMillis infoTimer;
 // this and over will result in velocity of 127
 const double maxHammerSpeed = 0.06; // adc bits per microsecond
 const int velocityMapLength = 1024;
+const double logBase = 5; // base used for log multiplier, with 1 setting the multiplier to always 1
 int velocityMap[velocityMapLength];
 // used to put hammer speed on an appropriate scale for indexing into velocityMap
 double hammerSpeedScaler = velocityMapLength / maxHammerSpeed;
@@ -103,8 +107,10 @@ void setup() {
   MIDI.begin(MIDI_CHANNEL_OMNI);
 
   // generate values for velocity map
-  for (int i = 0; i < velocityMapLength; i++) { 
-    // logMultiplier = 
+  double logMultiplier;
+  for (int i = 0; i < velocityMapLength; i++) {
+    // logMultiplier will always be between 0 and 1
+    logMultiplier = log(i / (double)velocityMapLength * (logBase - 1) + 1) / log(logBase);
     velocityMap[i] = round(127 * i / (double)velocityMapLength);
   }
 

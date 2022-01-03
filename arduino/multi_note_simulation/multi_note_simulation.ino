@@ -166,10 +166,10 @@ void loop() {
         
         // check for note offs
         if (noteOns[i][j]) {
-          if ((adcValues[i][j] > noteOnThreshold) == (sensorFullyOff > sensorFullyOn)) {
+          if ((adcValues[i][j] > noteOffThreshold) == (sensorFullyOff > sensorFullyOn)) {
             // could get key velocity for note off velocity
             MIDI.sendNoteOff(adcNotes[i][j], 64, 1);
-            // Serial.printf("note off: velocity %d on adc %d sensor %d \n", 64, i, j);
+            Serial.printf("note off: noteOffThreshold %d, adcValue %d, velocity %d on adc %d sensor %d \n", noteOffThreshold, adcValues[i][j], 64, i, j);
             noteOns[i][j] = false;
           }
         }

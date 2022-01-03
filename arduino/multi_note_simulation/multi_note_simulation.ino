@@ -33,16 +33,19 @@ int adcPins[][8] = { { 0, 1, 2 },
 int adcNotes[][8] = { { 64, 65, 66 },
                       { 66, 67, 68 } };
 // define the range of the sensors, with sensorFullyOn being the key fully depressed
-const int sensorFullyOn = 64;
-const int sensorFullyOff = 512;
+// this will work regardless of sensorFullyOn < sensorFullyOff or sensorFullyOff < sensorFullyOn
+const int sensorFullyOn = 400;
+const int sensorFullyOff = 0;
+const int sensorLow = min(sensorFullyOn, sensorFullyOff);
+const int sensorHigh = max(sensorFullyOn, sensorFullyOff);
 
 // simulation parameters
 // threshold for hammer to activate note
 const int noteOnThreshold = sensorFullyOn + 0.1 * (sensorFullyOn - sensorFullyOff);
 // threshold for key to trigger noteoff
 const int noteOffThreshold = sensorFullyOn - 0.5 * (sensorFullyOn - sensorFullyOff);
-// gravity for hammer, measured in adc bits per microsecond
-double gravity = (sensorFullyOn - sensorFullyOff) / (double)200000000;
+// gravity for hammer, measured in adc bits per microsecond per microsecond
+double gravity = (sensorFullyOn - sensorFullyOff) / (double)1200000000;
 
 // keeping track of simulation states
 // key positions
@@ -56,9 +59,27 @@ bool noteOns[adcCount][8] = {0};
 // and reset to zero: elapsed[i][j] = 0;
 elapsedMicros elapsed[adcCount][8];
 elapsedMillis infoTimer;
+
+// set up map of velocities, mapping from hammer speed to midi value
+// hammer speed seems to range from ~0.005 to ~0.05 adc bits per microsecond
+// ~5 to ~50 adc bits per millisecond, ~5000 to ~50,000 adc bits per second
+// scale 
+
+// this and over will result in velocity of 127
+const double maxHammerSpeed = 0.06; // adc bits per microsecond
+const int velocityMapLength = 1024;
+int velocityMap[velocityMapLength];
+// used to put hammer speed on an appropriate scale for indexing into velocityMap
+double hammerSpeedScaler = velocityMapLength / maxHammerSpeed;
+
+// whether or not to print in the current loop
 bool printInfo = false;
-// whether to use print statements for plotting or text
+// whether to use print statements for arduino serial plotter; if false, print text and disregard serial plotter formatting
 const bool plotSerial = true;
+
+// initalize velocity variables
+double velocity;
+int velocityIndex;
 
 void setup() {
   Serial.begin(57600);
@@ -81,14 +102,18 @@ void setup() {
   // This will also call usb_midi's begin()
   MIDI.begin(MIDI_CHANNEL_OMNI);
 
-
+  // generate values for velocity map
+  for (int i = 0; i < velocityMapLength; i++) { 
+    // logMultiplier = 
+    velocityMap[i] = round(127 * i / (double)velocityMapLength);
+  }
 
   // wait until device mounted
   while (!USBDevice.mounted()) delay(1);
 }
 
 void loop() {
-  if (infoTimer >= 10) {
+  if (infoTimer >= 500) {
     printInfo = true;
     infoTimer = 0;
     // Serial.print("\n");
@@ -103,12 +128,15 @@ void loop() {
         // don't need to store an array of last adc values...
         lastAdcValues[i][j] = adcValues[i][j];
         adcValues[i][j] = adcs[i].readADC(adcPins[i][j]);
+        adcValues[i][j] = min(adcValues[i][j], sensorHigh);
+        adcValues[i][j] = max(adcValues[i][j], sensorLow);
         keySpeed = (adcValues[i][j] - lastAdcValues[i][j]) / (double)elapsed[i][j];
         if (!plotSerial && printInfo && i == 0 && j == 0) {
           Serial.printf("keySpeed: %f elapsed: %d  double elapsed: %f \n", keySpeed, (int)elapsed[i][j], (double)elapsed[i][j]);
         }
         // update hammer position
-        // gravity should really be scaled by elapsed time
+        // gravity is measured in adc bits per millisecond
+        // key and hammer speeds are measured in adc bits per microsecond
         hammerSpeeds[i][j] = hammerSpeeds[i][j] - gravity * elapsed[i][j];
         // update according to hammer velocity
         hammerPositions[i][j] = hammerPositions[i][j] + hammerSpeeds[i][j] * elapsed[i][j];
@@ -124,11 +152,14 @@ void loop() {
         // check for note ons
         if ((hammerPositions[i][j] < noteOnThreshold) == (sensorFullyOff > sensorFullyOn)) {
           // do something with hammer speed to get velocity
-          double velocity = hammerSpeeds[i][j];
-
-          // MIDI.sendNoteOn(adcNotes[i][j], velocity, 1);
+          velocity = hammerSpeeds[i][j];
+          velocityIndex = round(hammerSpeeds[i][j] * hammerSpeedScaler);
+          velocityIndex = min(velocityIndex, velocityMapLength);
+          MIDI.sendNoteOn(adcNotes[i][j], velocityMap[velocityIndex], 1);
           noteOns[i][j] = true;
-          // Serial.printf("\n note on: velocity %d on adc %d sensor %d \n", velocity, i, j);
+          if ((i == 0 && j == 0) || (i == 1 && j == 2)){
+            Serial.printf("\n note on: hammerSpeed %f, velocityIndex %d, velocity %d on adc %d sensor %d \n", velocity, velocityIndex, velocityMap[velocityIndex], i, j);
+          }
           hammerPositions[i][j] = noteOnThreshold;
           hammerSpeeds[i][j] = -hammerSpeeds[i][j];
           }

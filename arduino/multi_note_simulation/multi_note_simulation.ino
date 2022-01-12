@@ -62,6 +62,7 @@ bool noteOns[adcCount][8] = {0};
 // and reset to zero: elapsed[i][j] = 0;
 elapsedMicros elapsed[adcCount][8];
 elapsedMillis infoTimer;
+elapsedMicros loopTimer;
 
 // set up map of velocities, mapping from hammer speed to midi value
 // hammer speed seems to range from ~0.005 to ~0.05 adc bits per microsecond
@@ -77,7 +78,7 @@ int velocityMap[velocityMapLength];
 double hammerSpeedScaler = velocityMapLength / maxHammerSpeed;
 
 // whether or not to print in the current loop
-bool printInfo = false;
+bool printInfo = true;
 // whether to use print statements for arduino serial plotter; if false, print text and disregard serial plotter formatting
 const bool plotSerial = true;
 
@@ -119,13 +120,14 @@ void setup() {
 }
 
 void loop() {
-  if (infoTimer >= 500) {
-    printInfo = true;
-    infoTimer = 0;
-    // Serial.print("\n");
-  } else {
-    printInfo = false;
-  }
+  // if (infoTimer >= 500) {
+  //   printInfo = true;
+  //   infoTimer = 0;
+  //   // Serial.print("\n");
+  // } else {
+  //   printInfo = false;
+  // }
+  
 
   for (int i = 0; i < adcCount; i++) {
     for (int j = 0; j < adcSensorCounts[i]; j++) {
@@ -192,7 +194,9 @@ void loop() {
     if (plotSerial && printInfo){
       // Serial.printf("%f\n", hammerPositions[0][0]);
       // Serial.printf("hammer:%f\n", hammerPositions[0][0]);
-      Serial.printf("key:%d hammer:%f hammerSpeed:%f\n", adcValues[0][0], hammerPositions[0][0], abs(hammerSpeeds[0][0]) * 20000);
+      // Serial.printf("key:%d hammer:%f hammerSpeed:%f\n", adcValues[0][0], hammerPositions[0][0], abs(hammerSpeeds[0][0]) * 20000);
+      Serial.printf("%d\n", (int)loopTimer);
+      loopTimer = 0;
     }
   }
 

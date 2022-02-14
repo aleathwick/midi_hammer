@@ -48,14 +48,13 @@ const int sensorHigh = max(sensorFullyOn, sensorFullyOff);
 const int noteOnThreshold = sensorFullyOn + 0.1 * (sensorFullyOn - sensorFullyOff);
 // threshold for key to trigger noteoff
 const int noteOffThreshold = sensorFullyOn - 0.5 * (sensorFullyOn - sensorFullyOff);
-if (fixed_iteration) {
-    // gravity for hammer, measured in adc bits per microsecond per microsecond
-    const double gravity = (sensorFullyOn - sensorFullyOff) / (double)1200000000;
-} else {
-    // gravity for hammer, measured in adc bits per iteration per iteration
-    const int gravity = (sensorFullyOn - sensorFullyOff) / 100;  
-}
-
+#if fixed_iteration
+  // gravity for hammer, measured in adc bits per microsecond per microsecond
+  const double gravity = (sensorFullyOn - sensorFullyOff) / (double)1200000000;
+#else
+  // gravity for hammer, measured in adc bits per iteration per iteration
+  const int gravity = (sensorFullyOn - sensorFullyOff) / 100;  
+#endif
 
 
 
@@ -64,15 +63,16 @@ if (fixed_iteration) {
 int adcValues[adcCount][8] = {0};
 int lastAdcValues[adcCount][8] = {0};
 // these three are ints if loop length is fixed, doubles otherwise
-if (fixed_iteration) {
-    int keySpeed = 0;
-    int hammerPositions[adcCount][8] = {0};
-    int hammerSpeeds[adcCount][8] = {0};
-} else {
-    double keySpeed = 0;
-    double hammerPositions[adcCount][8] = {0};
-    double hammerSpeeds[adcCount][8] = {0};
-}
+#if fixed_iteration
+  int keySpeed = 0;
+  int hammerPositions[adcCount][8] = {0};
+  int hammerSpeeds[adcCount][8] = {0};
+#else
+  double keySpeed = 0;
+  double hammerPositions[adcCount][8] = {0};
+  double hammerSpeeds[adcCount][8] = {0};
+#endif
+
 bool noteOns[adcCount][8] = {0};
 // can turn to int like so: int micros = elapsed[i][j];
 // and reset to zero: elapsed[i][j] = 0;
@@ -86,13 +86,13 @@ elapsedMicros loopTimer;
 // scale 
 
 // this and over will result in velocity of 127
-if (fixed_iteration) {
-    const int maxHammerSpeed = 200; // adc bits per iteration
-    const int velocityMapLength = maxHammerSpeed;
-} else {
-    const double maxHammerSpeed = 0.06; // adc bits per microsecond
-    const int velocityMapLength = 1024;
-}
+#if fixed_iteration
+  const int maxHammerSpeed = 200; // adc bits per iteration
+  const int velocityMapLength = maxHammerSpeed;
+#else
+  const double maxHammerSpeed = 0.06; // adc bits per microsecond
+  const int velocityMapLength = 1024;
+#endif
 
 const double logBase = 10; // base used for log multiplier, with 1 setting the multiplier to always 1
 // int velocityMap[velocityMapLength];
@@ -109,13 +109,13 @@ const bool plotSerial = true;
 // initalize velocity variables
 // velocity is int if iteration length is fixed, else is double
 
-if (fixed_iteration) {
-    int velocity;
-    int velocityIndex;
-} else {
-    double velocity;
-    double velocityIndex;
-}
+#if fixed_iteration
+  int velocity;
+#else
+  double velocity;
+#endif
+
+int velocityIndex;
 
 void setup() {
   Serial.begin(57600);
@@ -172,12 +172,12 @@ void loop() {
         if (fixed_iteration) {
             keySpeed = adcValues[i][j] - lastAdcValues[i][j];
             if (!plotSerial && printInfo && i == 0 && j == 0) {
-                Serial.printf("keySpeed: %d elapsed: %d  \n", keySpeed, (int)elapsed[i][j];
+                Serial.printf("keySpeed: %d elapsed: %d  \n", keySpeed, (int)elapsed[i][j]);
             }
         } else {
             keySpeed = (adcValues[i][j] - lastAdcValues[i][j]) / (double)elapsed[i][j];
             if (!plotSerial && printInfo && i == 0 && j == 0) {
-                Serial.printf("keySpeed: %f elapsed: %d  \n", keySpeed, (int)elapsed[i][j];
+                Serial.printf("keySpeed: %f elapsed: %d  \n", keySpeed, (int)elapsed[i][j]);
             }
         }
         // update hammer position

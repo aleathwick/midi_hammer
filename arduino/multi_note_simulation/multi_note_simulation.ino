@@ -4,17 +4,25 @@
 #include <Arduino.h>
 #include <Adafruit_TinyUSB.h>
 #include <Adafruit_MCP3008.h>
+// mcp3208 library: 
+#include <MCP3208.h>
 // MIDI Library: https://github.com/FortySevenEffects/arduino_midi_library
 #include <MIDI.h>
 // elapsedMillis: https://github.com/pfeerick/elapsedMillis
 #include <elapsedMillis.h>
+
 // for log
 #include <math.h>
+
+// to do:
+// try filtering 
+// circular buffer - store previous values
 
 
 
 // ADCs
-Adafruit_MCP3008 adcs[2];
+MCP3208 adcs[2];
+// Adafruit_MCP3008 adcs[2];
 
 // USB MIDI object
 Adafruit_USBD_MIDI usb_midi;
@@ -26,19 +34,19 @@ MIDI_CREATE_INSTANCE(Adafruit_USBD_MIDI, usb_midi, MIDI);
 
 // ADC and sensor set up
 const int adcCount = 2;  // n adcs
-const int adcBits = 1024;
-int adcSelects[] = { 17, 15 };     // pins for selecting adcs
-int adcSensorCounts[] = { 3, 3 };  // sensors per adc
+const int adcBits = 2048;
+int adcSelects[] = { 17, 22 };     // pins for selecting adcs
+int adcSensorCounts[] = { 3, 2 };  // sensors per adc
 // last dimension must be at least of size max(adcSensorCounts)
 // may as well make it 8, the max possible
-int adcPins[][8] = { { 0, 1, 2 },
-                     { 0, 1, 2 } };
-int adcNotes[][8] = { { 64, 65, 66 },
-                      { 66, 67, 68 } };
+int adcPins[][8] = { { 5, 6, 7 },
+                     { 0, 1 } };
+int adcNotes[][8] = { { 65, 66, 67 },
+                      { 68, 69, 70 } };
 // define the range of the sensors, with sensorFullyOn being the key fully depressed
 // this will work regardless of sensorFullyOn < sensorFullyOff or sensorFullyOff < sensorFullyOn
-const int sensorFullyOn = 400;
-const int sensorFullyOff = 0;
+const int sensorFullyOn = 600;
+const int sensorFullyOff = 2048;
 const int sensorLow = min(sensorFullyOn, sensorFullyOff);
 const int sensorHigh = max(sensorFullyOn, sensorFullyOff);
 
@@ -51,6 +59,8 @@ const int noteOffThreshold = sensorFullyOn - 0.5 * (sensorFullyOn - sensorFullyO
 double gravity = (sensorFullyOn - sensorFullyOff) / (double)1200000000;
 
 // keeping track of simulation states
+// raw ADC - may apply some processing to signal
+int rawAdcValues[adcCount][8] = {0};
 // key positions
 int adcValues[adcCount][8] = {0};
 int lastAdcValues[adcCount][8] = {0};
@@ -81,6 +91,8 @@ double hammerSpeedScaler = velocityMapLength / maxHammerSpeed;
 bool printInfo = true;
 // whether to use print statements for arduino serial plotter; if false, print text and disregard serial plotter formatting
 const bool plotSerial = true;
+// used to restrict printing to only a few iterations after certain events
+int printTime = 0;
 
 // initalize velocity variables
 double velocity;
@@ -119,6 +131,11 @@ void setup() {
   while (!USBDevice.mounted()) delay(1);
 }
 
+// can do setup on the other core too
+// void setup1() {
+
+// }
+
 void loop() {
   // if (infoTimer >= 500) {
   //   printInfo = true;
@@ -135,7 +152,8 @@ void loop() {
         // update key position and speed
         // don't need to store an array of last adc values...
         lastAdcValues[i][j] = adcValues[i][j];
-        adcValues[i][j] = adcs[i].readADC(adcPins[i][j]);
+        rawAdcValues[i][j] = adcs[i].readADC(adcPins[i][j]);
+        adcValues[i][j] = rawAdcValues[i][j];
         adcValues[i][j] = min(adcValues[i][j], sensorHigh);
         adcValues[i][j] = max(adcValues[i][j], sensorLow);
         keySpeed = (adcValues[i][j] - lastAdcValues[i][j]) / (double)elapsed[i][j];
@@ -160,12 +178,13 @@ void loop() {
         // check for note ons
         if ((hammerPositions[i][j] < noteOnThreshold) == (sensorFullyOff > sensorFullyOn)) {
           // do something with hammer speed to get velocity
+          printTime = 0;
           velocity = hammerSpeeds[i][j];
           velocityIndex = round(hammerSpeeds[i][j] * hammerSpeedScaler);
           velocityIndex = min(velocityIndex, velocityMapLength);
           MIDI.sendNoteOn(adcNotes[i][j], velocityMap[velocityIndex], 1);
           noteOns[i][j] = true;
-          if ((i == 0 && j == 0) || (i == 1 && j == 2)){
+          if (!plotSerial){ //&& ((i == 0 && j == 0) || (i == 1 && j == 2))){
             Serial.printf("\n note on: hammerSpeed %f, velocityIndex %d, velocity %d on adc %d sensor %d \n", velocity, velocityIndex, velocityMap[velocityIndex], i, j);
           }
           hammerPositions[i][j] = noteOnThreshold;
@@ -176,8 +195,11 @@ void loop() {
         if (noteOns[i][j]) {
           if ((adcValues[i][j] > noteOffThreshold) == (sensorFullyOff > sensorFullyOn)) {
             // could get key velocity for note off velocity
+            printTime = 0;
             MIDI.sendNoteOff(adcNotes[i][j], 64, 1);
-            Serial.printf("note off: noteOffThreshold %d, adcValue %d, velocity %d on adc %d sensor %d \n", noteOffThreshold, adcValues[i][j], 64, i, j);
+            if (!plotSerial){
+              Serial.printf("note off: noteOffThreshold %d, adcValue %d, velocity %d on adc %d sensor %d \n", noteOffThreshold, adcValues[i][j], 64, i, j);
+            }
             noteOns[i][j] = false;
           }
         }
@@ -189,17 +211,38 @@ void loop() {
         if (!(plotSerial) && printInfo) {
           Serial.printf("%d %f %f ", adcValues[i][j], hammerPositions[i][j], hammerSpeeds[i][j]);
         }
+      
       }
-    }
-    if (plotSerial && printInfo){
-      // Serial.printf("%f\n", hammerPositions[0][0]);
-      // Serial.printf("hammer:%f\n", hammerPositions[0][0]);
-      // Serial.printf("key:%d hammer:%f hammerSpeed:%f\n", adcValues[0][0], hammerPositions[0][0], abs(hammerSpeeds[0][0]) * 20000);
-      Serial.printf("%d\n", (int)loopTimer);
-      loopTimer = 0;
     }
   }
 
+  // post simulation loop, do some printing
+  printTime += 1;
+  if (plotSerial && printInfo && (printTime > 10)){
+    // Serial.printf("hammer:%f\n", hammerPositions[0][0]);
+    // Serial.printf("key:%d hammer:%f hammerSpeed:%f\n", adcValues[0][0], hammerPositions[0][0], abs(hammerSpeeds[0][0]) * 20000);
+    // Serial.printf("%d\n", (int)loopTimer);
+    for (int i = 0; i < adcCount; i++) {
+      for (int j = 0; j < adcSensorCounts[i]; j++) {
+        Serial.printf("key_%d_%d:%d,", i, j, adcValues[i][j]);
+        Serial.printf("ADC_%d_%d:%d,", i, j, rawAdcValues[i][j]);
+        Serial.printf("hammer_%d_%d:%f,", i, j, hammerPositions[i][j]);
+        
+      }
+    }
+    Serial.print('\n');
+    printTime = 0;
+  }
+    
+  loopTimer = 0;
   // read any new MIDI messages
   MIDI.read();
 }
+  
+
+// void loop1() {
+//   // uint32_t rp2040.fifo.pop() will block if the FIFO is empty, there is also a bool rp2040.fifo.pop_nb version
+//   Serial.printf("C1: Read value from FIFO: %d\n", rp2040.fifo.pop());
+//   // int rp2040.fifo.available() - get number of values available in this core's FIFO
+  
+// }

@@ -5,5 +5,11 @@ Working code for reading two sensors via mcp3008, and sending resultant velociti
 ### Arduino
 Uses [Earle Philhower's Raspberry Pico Arduino core](https://github.com/earlephilhower/arduino-pico), using Adafruit TinyUSB for usb midi.  
 There is code for:
-- Reading sensors from multiple mcp3008s
-- Sending notes over usb midi  
+- Reading sensors from multiple mcp3008 or mcp3208
+- Sending notes over usb midi
+
+## Notes to self
+### Arduino plotting
+See here for a good guide: https://diyrobocars.com/2020/05/04/arduino-serial-plotter-the-missing-manual/  
+
+

@@ -10,7 +10,8 @@
 #include <MIDI.h>
 // elapsedMillis: https://github.com/pfeerick/elapsedMillis
 #include <elapsedMillis.h>
-
+// CircularBuffer: https://github.com/rlogiacco/CircularBuffer
+#include <CircularBuffer.h>
 // for log
 #include <math.h>
 
@@ -45,7 +46,7 @@ int adcNotes[][8] = { { 65, 66, 67 },
                       { 68, 69, 70 } };
 // define the range of the sensors, with sensorFullyOn being the key fully depressed
 // this will work regardless of sensorFullyOn < sensorFullyOff or sensorFullyOff < sensorFullyOn
-const int sensorFullyOn = 600;
+const int sensorFullyOn = 700;
 const int sensorFullyOff = 2048;
 const int sensorLow = min(sensorFullyOn, sensorFullyOff);
 const int sensorHigh = max(sensorFullyOn, sensorFullyOff);
@@ -56,13 +57,23 @@ const int noteOnThreshold = sensorFullyOn + 0.1 * (sensorFullyOn - sensorFullyOf
 // threshold for key to trigger noteoff
 const int noteOffThreshold = sensorFullyOn - 0.5 * (sensorFullyOn - sensorFullyOff);
 // gravity for hammer, measured in adc bits per microsecond per microsecond
-double gravity = (sensorFullyOn - sensorFullyOff) / (double)1200000000;
+double gravity = (sensorFullyOn - sensorFullyOff) / (double)1000000000;
 
 // keeping track of simulation states
 // raw ADC - may apply some processing to signal
 int rawAdcValues[adcCount][8] = {0};
 // key positions
 int adcValues[adcCount][8] = {0};
+// https://forum.arduino.cc/t/initializing-an-array-of-structs-with-templates/478604
+// <> indicates a template object, from a template class
+// template classes can work with various data types
+// if I wanted circular buffers with different dtypes, I'd need to use a base class and derive CircularBuffer from that:
+// https://stackoverflow.com/questions/33507697/holding-template-class-objects-in-array 
+// https://stackoverflow.com/questions/12009314/how-to-create-an-array-of-templated-class-objects
+const int buffer_len = 10;
+CircularBuffer<int, buffer_len> rawAdcBuffers[adcCount][8];
+// CircularBuffer<int, buffer_len> processedAdcBuffers[adcCount][8];
+
 int lastAdcValues[adcCount][8] = {0};
 double keySpeed = 0;
 double hammerPositions[adcCount][8] = {0};
@@ -108,6 +119,10 @@ void setup() {
   //  SPI.setRX(4);
   for (int i = 0; i < adcCount; i++) {
     adcs[i].begin(adcSelects[i]);
+    // fill in ADC buffers with the default value
+    for (int j = 0; j < adcSensorCounts[i]; j++) {
+      while(rawAdcBuffers[i][j].push(sensorFullyOff));
+    }
   }
 
   pinMode(LED_BUILTIN, OUTPUT);
@@ -150,10 +165,10 @@ void loop() {
     for (int j = 0; j < adcSensorCounts[i]; j++) {
       if (elapsed[i][j] >= 5) {
         // update key position and speed
-        // don't need to store an array of last adc values...
         lastAdcValues[i][j] = adcValues[i][j];
-        rawAdcValues[i][j] = adcs[i].readADC(adcPins[i][j]);
-        adcValues[i][j] = rawAdcValues[i][j];
+        rawAdcBuffers[i][j].push(adcs[i].readADC(adcPins[i][j]));
+        // Could do some processing based on previous raw ADC values
+        adcValues[i][j] = rawAdcBuffers[i][j].last();
         adcValues[i][j] = min(adcValues[i][j], sensorHigh);
         adcValues[i][j] = max(adcValues[i][j], sensorLow);
         keySpeed = (adcValues[i][j] - lastAdcValues[i][j]) / (double)elapsed[i][j];
@@ -225,7 +240,7 @@ void loop() {
     for (int i = 0; i < adcCount; i++) {
       for (int j = 0; j < adcSensorCounts[i]; j++) {
         Serial.printf("key_%d_%d:%d,", i, j, adcValues[i][j]);
-        Serial.printf("ADC_%d_%d:%d,", i, j, rawAdcValues[i][j]);
+        Serial.printf("ADC_%d_%d:%d,", i, j, rawAdcBuffers[i][j].last());
         Serial.printf("hammer_%d_%d:%f,", i, j, hammerPositions[i][j]);
         
       }

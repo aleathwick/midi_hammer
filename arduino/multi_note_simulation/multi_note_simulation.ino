@@ -14,6 +14,7 @@
 #include <CircularBuffer.h>
 // for log
 #include <math.h>
+#include <gram_savitzky_golay.h>
 
 // to do:
 // try filtering 
@@ -70,9 +71,23 @@ int adcValues[adcCount][8] = {0};
 // if I wanted circular buffers with different dtypes, I'd need to use a base class and derive CircularBuffer from that:
 // https://stackoverflow.com/questions/33507697/holding-template-class-objects-in-array 
 // https://stackoverflow.com/questions/12009314/how-to-create-an-array-of-templated-class-objects
-const int buffer_len = 10;
+const int buffer_len = 15;
 CircularBuffer<int, buffer_len> rawAdcBuffers[adcCount][8];
 // CircularBuffer<int, buffer_len> processedAdcBuffers[adcCount][8];
+
+
+// Window size is 2*m+1
+const size_t m = 5;
+// Polynomial Order
+const size_t n = 2;
+// Initial Point Smoothing (ie evaluate polynomial at first point in the window)
+// Points are defined in range [-m;m]
+const size_t t = m;
+// Derivation order? 0: no derivation, 1: first derivative, 2: second derivative...
+const int d = 0;
+
+// Real-time filter (filtering at latest data point)
+gram_sg::SavitzkyGolayFilter filter(m, t, n, d);
 
 int lastAdcValues[adcCount][8] = {0};
 double keySpeed = 0;
@@ -167,8 +182,21 @@ void loop() {
         // update key position and speed
         lastAdcValues[i][j] = adcValues[i][j];
         rawAdcBuffers[i][j].push(adcs[i].readADC(adcPins[i][j]));
-        // Could do some processing based on previous raw ADC values
-        adcValues[i][j] = rawAdcBuffers[i][j].last();
+        // use raw adc values
+        // adcValues[i][j] = rawAdcBuffers[i][j].last();
+        // Or can do some processing based on multiple previous raw ADC values
+        std::vector<double> data = {(double)rawAdcBuffers[i][j][buffer_len - 11 ],
+                                    (double)rawAdcBuffers[i][j][buffer_len - 10 ],
+                                    (double)rawAdcBuffers[i][j][buffer_len - 9 ],
+                                    (double)rawAdcBuffers[i][j][buffer_len - 8 ],
+                                    (double)rawAdcBuffers[i][j][buffer_len - 7 ],
+                                    (double)rawAdcBuffers[i][j][buffer_len - 6 ],
+                                    (double)rawAdcBuffers[i][j][buffer_len - 5 ],
+                                    (double)rawAdcBuffers[i][j][buffer_len - 4 ],
+                                    (double)rawAdcBuffers[i][j][buffer_len - 3 ],
+                                    (double)rawAdcBuffers[i][j][buffer_len - 2 ],
+                                    (double)rawAdcBuffers[i][j][buffer_len - 1 ]};
+        adcValues[i][j] = filter.filter(data);
         adcValues[i][j] = min(adcValues[i][j], sensorHigh);
         adcValues[i][j] = max(adcValues[i][j], sensorLow);
         keySpeed = (adcValues[i][j] - lastAdcValues[i][j]) / (double)elapsed[i][j];

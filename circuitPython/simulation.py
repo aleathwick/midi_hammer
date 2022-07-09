@@ -45,13 +45,14 @@ def get_velocity(x):
 
 class Key:
     """Key object including all hammer simulation logic and midi triggering"""
-    def __init__(self, chan, pitch):
-        # chan should be an AnalogIn object
-        self.chan = chan
+    def __init__(self, mcp, pin, pitch):
+        # mcp is an mcp300x object
+        self.mcp = mcp
+        # which adc channel this key corresponds to
+        self.pin = pin
         # key position is simply the output of the adc
-        self.key_pos = chan.value
+        self.key_pos = self.mcp.read(self.pin) << 6
         self.key_speed = 0
-        
         # hammer position and speed are measured in the same units as key position and speed
         self.hammer_pos = 0.5
         self.hammer_speed = 0
@@ -79,7 +80,7 @@ class Key:
 
     def _update_key(self):
         last_key_pos = self.key_pos
-        self.key_pos = self.chan.value
+        self.key_pos = self.mcp.read(self.pin) << 6
         self.key_speed = (self.key_pos - last_key_pos) / self.elapsed
 
     def _update_hammer(self):
@@ -120,7 +121,7 @@ cs = [
 adcs = [MCP.MCP3008(spi, p) for p in cs]
 
 keys = [
-        Key(AnalogIn(adcs[0], MCP.P0), 62)#,
+        Key(adcs[0], MCP.P4, 62)#,
         # Key(AnalogIn(adcs[1], MCP.P1), 64)
     ]
 

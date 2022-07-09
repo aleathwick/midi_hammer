@@ -6,86 +6,152 @@ import usb_midi
 import adafruit_midi
 import adafruit_midi.note_on
 import adafruit_midi.note_off
+# imports for spi with mcp3008
+import busio
+import digitalio
+import adafruit_mcp3xxx.mcp3008 as MCP
+from adafruit_mcp3xxx.analog_in import AnalogIn
 
-
-
-GRAVITY = 1e-6
-ADC_BITS = 16
-MAX_ADC_VALUE = 2 ** ADC_BITS
-NOTE_ON_THRESHHOLD = MAX_ADC_VALUE + 100
-NOTE_OFF_THRESHHOLD = int(MAX_ADC_VALUE / 2)
-
+# initialize midi
 midi_channel = 1
 midi = adafruit_midi.MIDI(midi_out=usb_midi.ports[1], out_channel=midi_channel - 1)
 
+### general simulation parameters
+GRAVITY = 6e-6
+ADC_BITS = 16
+# MAX_ADC_VALUE = 2 ** ADC_BITS
+MAX_ADC_VALUE = 26000
+MIN_ADC_VALUE = 13000
+NOTE_ON_THRESHHOLD = MAX_ADC_VALUE + 9600
+NOTE_OFF_THRESHHOLD = int((MAX_ADC_VALUE - MIN_ADC_VALUE) / 2 + MIN_ADC_VALUE)
+NOTE_OFF_THRESHHOLD = 10000
 
 # max speed of hammer (after multiplying by SPEED_MULTIPLIER)
 MAX_SPEED = 15000
 # multipler for speed of hammer (rounded multiplied value will be used to index into velocity lookup table)
-SPEED_MULTIPLIER = 1e6
+SPEED_MULTIPLIER = 1e7
+
 def log_speed(s, base=10):
     """apply log scaling to speed of hammer"""
     log_multiplier = math.log(s / MAX_SPEED * (base - 1) + 1, base)
     return round(s * log_multiplier)
+# final velocity map
 VELOCITIES = [max(round(i / log_speed(MAX_SPEED) * 127), 1) for i in range(MAX_SPEED)]
+
 def get_velocity(x):
     x_scaled = round(x * SPEED_MULTIPLIER)
     x_scaled_clipped = max(min(x_scaled, MAX_SPEED - 1), 0)
     return VELOCITIES[x_scaled_clipped]
 
-analog_in = AnalogIn(board.A0)
+class Key:
+    """Key object including all hammer simulation logic and midi triggering"""
+    def __init__(self, chan, pitch):
+        # chan should be an AnalogIn object
+        self.chan = chan
+        # key position is simply the output of the adc
+        self.key_pos = chan.value
+        self.key_speed = 0
+        
+        # hammer position and speed are measured in the same units as key position and speed
+        self.hammer_pos = 0.5
+        self.hammer_speed = 0
+        
+        # timestamps for calculating speeds
+        self.timestamp = time.monotonic_ns()
+        self.last_timestamp = time.monotonic_ns()
+        self.elapsed = 0
 
-def get_voltage(pin):
-    return (pin.value) # / MAX_ADC_VALUE
+        self.pitch = pitch
+        self.note_on = False
 
-key_pos = get_voltage(analog_in)
-hammer_pos = 0.5
-hammer_speed = 0
-note_on = False
+    def step(self):
+        'perform one step of simulation'
+        self._update_time()
+        self._update_key()
+        self._update_hammer()
+        self._check_note_on()
+        self._check_note_off()
 
-timestamp = time.monotonic_ns()
+    def _update_time(self):
+        self.last_timestamp = self.timestamp
+        self.timestamp = time.monotonic_ns()
+        self.elapsed = self.timestamp - self.last_timestamp
+
+    def _update_key(self):
+        last_key_pos = self.key_pos
+        self.key_pos = self.chan.value
+        self.key_speed = (self.key_pos - last_key_pos) / self.elapsed
+
+    def _update_hammer(self):
+        # preliminary update
+        self.hammer_speed -= GRAVITY
+        self.hammer_pos += round(self.hammer_speed * self.elapsed)
+        # check for interaction with key
+        if self.hammer_pos < self.key_pos:
+            self.hammer_pos = self.key_pos
+            if self.hammer_speed < self.key_speed:
+                self.hammer_speed = self.key_speed
+
+    def _check_note_on(self):
+        if self.hammer_pos > NOTE_ON_THRESHHOLD:
+            velocity = get_velocity(self.hammer_speed)
+            # print('speed:', hammer_speed * 1000)
+            # print(velocity)
+            midi.send(adafruit_midi.note_on.NoteOn(self.pitch, velocity))
+            self.note_on = True
+            self.hammer_pos = NOTE_ON_THRESHHOLD
+            self.hammer_speed = -self.hammer_speed
+        
+    def _check_note_off(self):
+        if self.note_on:
+            if self.key_pos < NOTE_OFF_THRESHHOLD:
+                midi.send(adafruit_midi.note_off.NoteOff(self.pitch, 54))
+                self.note_on = False
+
+# this needs the following pins: busio.SPI(board.SCK0, board.MOSI0, board.MISO0)
+spi = busio.SPI(board.GP18, board.GP19, board.GP16)
+
+# SPI chip selects for ADCs 
+cs = [  
+        digitalio.DigitalInOut(board.GP17),
+        digitalio.DigitalInOut(board.GP22)
+    ]
+
+adcs = [MCP.MCP3008(spi, p) for p in cs]
+
+keys = [
+        Key(AnalogIn(adcs[0], MCP.P0), 62)#,
+        # Key(AnalogIn(adcs[1], MCP.P1), 64)
+    ]
+
+## possible alternative approach: use adc_pin_groups and note_pitches to generate keys
+# adc_pin_groups = [
+#                     [0],
+#                     [1]
+#                 ]
+
+# note_pitches = [
+#                     [62],
+#                     [64]
+#                 ]
+
+# chan_groups = [[AnalogIn(adc, getattr(MCP, 'P' + str(p))) for p in adc_pins] for adc, adc_pins in zip(adcs, adc_pin_groups)]
+
+
 time.sleep(0.1)
-i = 1
+print_i = 1
 print("READY")
 while True:
-    i += 1
-    [i for i in range(88 * 2)]
+    for k in keys:
+        if print_i % 10 == 0:
+            print('key pos:', k.key_pos)
+            # print(k.hammer_pos)
+        print_i += 1
+        [i for i in range(88 * 2)]
 
-    last_timestamp = timestamp
-    timestamp = time.monotonic_ns()
-    elapsed = timestamp - last_timestamp
+        # if i % 100 == 0:
+        #     print('hammer_pos:', k.hammer_pos)
+        #     print('key_speed:', k.key_speed)
+        k.step()
 
-    ### update key
-    last_key_pos = key_pos
-    last_hammer_pos = hammer_pos
-    key_pos = get_voltage(analog_in)
-    key_speed = (key_pos - last_key_pos) / elapsed
-    # if i % 100 == 0:
-    #     print('hammer_pos:', hammer_pos)
-    #     print('key_speed:', key_speed)
-
-    ### update hammer
-    # preliminary update
-    hammer_speed -= GRAVITY
-    hammer_pos += round(hammer_speed * elapsed)
-
-    # check for interaction with key
-    if hammer_pos < key_pos:
-        hammer_pos = key_pos
-        if hammer_speed < key_speed:
-            hammer_speed = key_speed
-    
-    # check for note ons
-    if hammer_pos > NOTE_ON_THRESHHOLD:
-        velocity = get_velocity(hammer_speed)
-        print('speed:', hammer_speed * 1000)
-        print(velocity)
-        midi.send(adafruit_midi.note_on.NoteOn(64, velocity))
-        note_on = True
-        hammer_pos = NOTE_ON_THRESHHOLD
-        hammer_speed = -hammer_speed
-    
-    # check for note offs:
-    if note_on:
-        if key_pos < NOTE_OFF_THRESHHOLD:
-            midi.send(adafruit_midi.note_off.NoteOff(64, 54))
+       

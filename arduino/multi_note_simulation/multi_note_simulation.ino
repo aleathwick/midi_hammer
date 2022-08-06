@@ -14,7 +14,7 @@
 #include <CircularBuffer.h>
 // for log
 #include <math.h>
-#include <gram_savitzky_golay.h>
+// #include <gram_savitzky_golay.h>
 
 // to do:
 // try filtering 
@@ -23,8 +23,8 @@
 
 
 // ADCs
-MCP3208 adcs[2];
-// Adafruit_MCP3008 adcs[2];
+// MCP3208 adcs[2];
+Adafruit_MCP3008 adcs[2];
 
 // USB MIDI object
 Adafruit_USBD_MIDI usb_midi;
@@ -35,30 +35,33 @@ MIDI_CREATE_INSTANCE(Adafruit_USBD_MIDI, usb_midi, MIDI);
 
 
 // ADC and sensor set up
-const int adcCount = 2;  // n adcs
+const int adcCount = 1;  // n adcs
 const int adcBits = 2048;
-int adcSelects[] = { 17, 22 };     // pins for selecting adcs
-int adcSensorCounts[] = { 3, 2 };  // sensors per adc
+int adcSelects[] = { 22, 17 };     // pins for selecting adcs
+int adcSensorCounts[] = { 1, 2 };  // sensors per adc
 // last dimension must be at least of size max(adcSensorCounts)
 // may as well make it 8, the max possible
-int adcPins[][8] = { { 5, 6, 7 },
+int adcPins[][8] = { { 2 },// { 5, 6, 7 },
                      { 0, 1 } };
 int adcNotes[][8] = { { 65, 66, 67 },
                       { 68, 69, 70 } };
 // define the range of the sensors, with sensorFullyOn being the key fully depressed
 // this will work regardless of sensorFullyOn < sensorFullyOff or sensorFullyOff < sensorFullyOn
-const int sensorFullyOn = 700;
-const int sensorFullyOff = 2048;
+const int sensorFullyOn = 430; //730;
+const int sensorFullyOff = 50; //2048;
 const int sensorLow = min(sensorFullyOn, sensorFullyOff);
 const int sensorHigh = max(sensorFullyOn, sensorFullyOff);
 
 // simulation parameters
 // threshold for hammer to activate note
-const int noteOnThreshold = sensorFullyOn + 0.1 * (sensorFullyOn - sensorFullyOff);
+const int noteOnThreshold = sensorFullyOn + 1.2 * (sensorFullyOn - sensorFullyOff);
 // threshold for key to trigger noteoff
 const int noteOffThreshold = sensorFullyOn - 0.5 * (sensorFullyOn - sensorFullyOff);
 // gravity for hammer, measured in adc bits per microsecond per microsecond
-double gravity = (sensorFullyOn - sensorFullyOff) / (double)1000000000;
+// if the key press is ADC_range, where ADC_range is abs(sensorFullyOn - sensorFullyOff)
+// hammer travel in mm; used to calculate gravity in adc bits
+const double hammer_travel = 4.5;
+const double gravity = (sensorFullyOn - sensorFullyOff) / (hammer_travel * (double)9810000000);
 
 // keeping track of simulation states
 // raw ADC - may apply some processing to signal
@@ -71,15 +74,15 @@ int adcValues[adcCount][8] = {0};
 // if I wanted circular buffers with different dtypes, I'd need to use a base class and derive CircularBuffer from that:
 // https://stackoverflow.com/questions/33507697/holding-template-class-objects-in-array 
 // https://stackoverflow.com/questions/12009314/how-to-create-an-array-of-templated-class-objects
-const int buffer_len = 15;
+const int buffer_len = 25;
 CircularBuffer<int, buffer_len> rawAdcBuffers[adcCount][8];
-// CircularBuffer<int, buffer_len> processedAdcBuffers[adcCount][8];
+CircularBuffer<double, buffer_len> keySpeedBuffers[adcCount][8];
 
 
 // Window size is 2*m+1
-const size_t m = 5;
+const size_t m = 12;
 // Polynomial Order
-const size_t n = 2;
+const size_t n = 1;
 // Initial Point Smoothing (ie evaluate polynomial at first point in the window)
 // Points are defined in range [-m;m]
 const size_t t = m;
@@ -87,10 +90,10 @@ const size_t t = m;
 const int d = 0;
 
 // Real-time filter (filtering at latest data point)
-gram_sg::SavitzkyGolayFilter filter(m, t, n, d);
+// gram_sg::SavitzkyGolayFilter filter(m, t, n, d);
 
 int lastAdcValues[adcCount][8] = {0};
-double keySpeed = 0;
+double keySpeedsFiltered[adcCount][8] = {0.0};
 double hammerPositions[adcCount][8] = {0};
 double hammerSpeeds[adcCount][8] = {0};
 bool noteOns[adcCount][8] = {0};
@@ -137,6 +140,7 @@ void setup() {
     // fill in ADC buffers with the default value
     for (int j = 0; j < adcSensorCounts[i]; j++) {
       while(rawAdcBuffers[i][j].push(sensorFullyOff));
+      while(keySpeedBuffers[i][j].push(0.0));
     }
   }
 
@@ -175,7 +179,7 @@ void loop() {
   //   printInfo = false;
   // }
   
-
+  if (elapsed[0][0] >= 2500) {
   for (int i = 0; i < adcCount; i++) {
     for (int j = 0; j < adcSensorCounts[i]; j++) {
       if (elapsed[i][j] >= 5) {
@@ -183,25 +187,17 @@ void loop() {
         lastAdcValues[i][j] = adcValues[i][j];
         rawAdcBuffers[i][j].push(adcs[i].readADC(adcPins[i][j]));
         // use raw adc values
-        // adcValues[i][j] = rawAdcBuffers[i][j].last();
-        // Or can do some processing based on multiple previous raw ADC values
-        std::vector<double> data = {(double)rawAdcBuffers[i][j][buffer_len - 11 ],
-                                    (double)rawAdcBuffers[i][j][buffer_len - 10 ],
-                                    (double)rawAdcBuffers[i][j][buffer_len - 9 ],
-                                    (double)rawAdcBuffers[i][j][buffer_len - 8 ],
-                                    (double)rawAdcBuffers[i][j][buffer_len - 7 ],
-                                    (double)rawAdcBuffers[i][j][buffer_len - 6 ],
-                                    (double)rawAdcBuffers[i][j][buffer_len - 5 ],
-                                    (double)rawAdcBuffers[i][j][buffer_len - 4 ],
-                                    (double)rawAdcBuffers[i][j][buffer_len - 3 ],
-                                    (double)rawAdcBuffers[i][j][buffer_len - 2 ],
-                                    (double)rawAdcBuffers[i][j][buffer_len - 1 ]};
-        adcValues[i][j] = filter.filter(data);
+        adcValues[i][j] = rawAdcBuffers[i][j].last();
         adcValues[i][j] = min(adcValues[i][j], sensorHigh);
         adcValues[i][j] = max(adcValues[i][j], sensorLow);
-        keySpeed = (adcValues[i][j] - lastAdcValues[i][j]) / (double)elapsed[i][j];
+        // keySpeedsFiltered[i][j] = (adcValues[i][j] - lastAdcValues[i][j]) / (double)elapsed[i][j];
+        keySpeedBuffers[i][j].push((adcValues[i][j] - lastAdcValues[i][j]) / (double)elapsed[i][j]);
+        // filter the key speeds in some way
+        keySpeedsFiltered[i][j] = keySpeedBuffers[i][j].last();
+
+
         if (!plotSerial && printInfo && i == 0 && j == 0) {
-          Serial.printf("keySpeed: %f elapsed: %d  double elapsed: %f \n", keySpeed, (int)elapsed[i][j], (double)elapsed[i][j]);
+          Serial.printf("keySpeed: %f elapsed: %d  double elapsed: %f \n", keySpeedBuffers[i][j].last(), (int)elapsed[i][j], (double)elapsed[i][j]);
         }
         // update hammer position
         // gravity is measured in adc bits per millisecond
@@ -213,9 +209,13 @@ void loop() {
         // hammer update based on interaction with key
         if ((hammerPositions[i][j] > adcValues[i][j]) == (sensorFullyOff > sensorFullyOn)) {
           hammerPositions[i][j] = adcValues[i][j];
+          // we could check to see if the hammer speed is greater then key speed, but probably not necessary
+          // after all, the key as 'caught up' to the hammer
+          // if ((hammerSpeeds[i][j] > keySpeedsFiltered[i][j]) == (sensorFullyOff > sensorFullyOn)) {
             // if (abs(hammerSpeeds[i][j]) < abs(keySpeed)) {
-              hammerSpeeds[i][j] = keySpeed;
-            // }
+            hammerSpeeds[i][j] = keySpeedsFiltered[i][j];
+          // }
+        // }
         }
 
         // check for note ons
@@ -248,6 +248,9 @@ void loop() {
         }
         // finally, reset timer for this sensor
         // doing this at end may produce a low estimate of key speed (not set to zero immediately on adc read)
+        if (printTime > 3){
+          Serial.printf("elapsed:%d,", (int)elapsed[i][j]);
+        }
         elapsed[i][j] = 0;
 
         // possibly print some stuff
@@ -261,15 +264,23 @@ void loop() {
 
   // post simulation loop, do some printing
   printTime += 1;
-  if (plotSerial && printInfo && (printTime > 10)){
+  if (plotSerial && printInfo && (printTime > 3)){
     // Serial.printf("hammer:%f\n", hammerPositions[0][0]);
     // Serial.printf("key:%d hammer:%f hammerSpeed:%f\n", adcValues[0][0], hammerPositions[0][0], abs(hammerSpeeds[0][0]) * 20000);
-    // Serial.printf("%d\n", (int)loopTimer);
+    // Serial.printf("loopTimer:%d,", (int)loopTimer);
+
+    // for (int i = adcCount-1; i < adcCount; i++) {
+    //   for (int j = adcSensorCounts[i]-1; j < adcSensorCounts[i]; j++) {
     for (int i = 0; i < adcCount; i++) {
       for (int j = 0; j < adcSensorCounts[i]; j++) {
         Serial.printf("key_%d_%d:%d,", i, j, adcValues[i][j]);
-        Serial.printf("ADC_%d_%d:%d,", i, j, rawAdcBuffers[i][j].last());
+        // Serial.printf("ADC_%d_%d:%d,", i, j, rawAdcBuffers[i][j].last());
         Serial.printf("hammer_%d_%d:%f,", i, j, hammerPositions[i][j]);
+        Serial.printf("keySpeed_%d_%d:%f,", i, j, keySpeedsFiltered[i][j] * 10000);
+        Serial.printf("hammerSpeed_%d_%d:%f,", i, j, hammerSpeeds[i][j] * 10000);
+        
+        // Serial.printf("hammerSpeed_%d_%d:%f,", i, j, hammerPositions[i][j]);
+
         
       }
     }
@@ -280,6 +291,7 @@ void loop() {
   loopTimer = 0;
   // read any new MIDI messages
   MIDI.read();
+  }
 }
   
 

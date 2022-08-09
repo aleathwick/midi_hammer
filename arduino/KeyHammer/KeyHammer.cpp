@@ -114,7 +114,10 @@ KeyHammer::check_note_off () {
 }
 
 KeyHammer::step () {
-  //something here
+  update_key()
+  update_hammer()
+  check_note_on()
+  check_note_off()
   elapsed = 0;
 }
 

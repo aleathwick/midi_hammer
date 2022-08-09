@@ -14,6 +14,8 @@ class KeyHammer
     int sensorFullyOff;
     int noteOnThreshold;
     int noteOffThreshold;
+    int sensorMin;
+    int sensorMax;
 
     int pin;
     int pitch;
@@ -50,6 +52,9 @@ KeyHammer::KeyHammer (Adafruit_MCP3008 adc, int pin, int pitch, int sensorFullyO
   pitch = pitch;
   sensorFullyOn = sensorFullyOn;
   sensorFullyOff = sensorFullyOff;
+  sensorMax = max(sensorFullyOn, sensorFullyOff);
+  sensorMin = min(sensorFullyOn, sensorFullyOff);
+
   noteOnThreshold = sensorFullyOn + 1.2 * (sensorFullyOn - sensorFullyOff);
   noteOffThreshold = sensorFullyOn - 0.5 * (sensorFullyOn - sensorFullyOff);
 
@@ -67,6 +72,10 @@ KeyHammer::KeyHammer (Adafruit_MCP3008 adc, int pin, int pitch, int sensorFullyO
 KeyHammer::update_key () {
   lastKeyPosition = keyPosition;
   keyPosition = adcs.readADC(pin);
+  // constrain key position to be within the range determined by sensor max and min
+  keyPosition = min(keyPosition, sensorMax);
+  keyPosition = max(keyPosition, sensorMin);
+
   keySpeed = (keyPosition - lastKeyPosition) / (double)elapsed);
 }
 

@@ -29,7 +29,7 @@ class KeyHammer
     // key and hammer speeds are measured in adc bits per microsecond
     double keySpeed;
 
-    int hammerPosition;
+    double hammerPosition;
     double hammerSpeed;
 
     elapsedMicros elapsed;
@@ -37,6 +37,8 @@ class KeyHammer
     bool noteOn;
     double velocity;
     int velocityIndex;
+
+    char printMode;
 
 
     void update_key();
@@ -51,7 +53,7 @@ class KeyHammer
     elapsedMicros elapsed;
 };
 
-KeyHammer::KeyHammer (Adafruit_MCP3008 adc, int pin, int pitch, int sensorFullyOn=430, int sensorFullyOff=50) {
+KeyHammer::KeyHammer (Adafruit_MCP3008 adc, int pin, int pitch, int sensorFullyOn=430, int sensorFullyOff=50, char printMode="") {
   adc = adc;
   pin = pin;
   pitch = pitch;
@@ -72,6 +74,8 @@ KeyHammer::KeyHammer (Adafruit_MCP3008 adc, int pin, int pitch, int sensorFullyO
   noteOn = false;
 
   elapsed = 0;
+
+  printMode=printMode;
 }
 
 KeyHammer::update_key () {
@@ -109,7 +113,7 @@ KeyHammer::check_note_on () {
     velocityIndex = min(velocityIndex, velocityMapLength);
     MIDI.sendNoteOn(pitch, velocityMap[velocityIndex], 1);
     noteOn = true;
-    if (!plotSerial){ //&& ((i == 0 && j == 0) || (i == 1 && j == 2))){
+    if (printMode == "info"){ //&& ((i == 0 && j == 0) || (i == 1 && j == 2))){
       Serial.printf("\n note on: hammerSpeed %f, velocityIndex %d, velocity %d pitch %d \n", velocity, velocityIndex, velocityMap[velocityIndex], pitch);
     }
     hammerPosition = noteOnThreshold;
@@ -121,7 +125,7 @@ KeyHammer::check_note_off () {
   if (noteOn){
     if ((keyPosition > noteOffThreshold) == (sensorFullyOff > sensorFullyOn)) {
       MIDI.sendNoteOff(pitch, 64, 1);
-      if (!plotSerial){
+      if (printMode == "info"){
         Serial.printf("note off: noteOffThreshold %d, adcValue %d, velocity %d  pitch %d \n", noteOffThreshold, keyPosition, 64, pitch);
       }
       noteOn = false;
@@ -134,6 +138,15 @@ KeyHammer::step () {
   update_hammer();
   check_note_on();
   check_note_off();
+  // print some stuff
+  if (printMode == "plot"){
+    // Serial.printf("%d %f %f ", keyPosition, hammerPosition, hammerSpeed);
+    Serial.printf("hammer_%d:%f,", pitch, hammerPosition);
+    Serial.printf("keySpeed_%d:%f,", pitch, keySpeed * 10000);
+    Serial.printf("hammerSpeed_%d:%f,", pitch, hammerSpeed * 10000);
+    // this newline may need to go after all keys have printed? I'm unsure how the serial plotter works.
+    Serial.print('\n');
+  }
   elapsed = 0;
 }
 

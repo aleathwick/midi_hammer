@@ -81,7 +81,7 @@ KeyHammer::KeyHammer (Adafruit_MCP3008 adc, int pin, int pitch, int sensorFullyO
 
   elapsed = 0;
 
-  printMode="plot";
+  printMode='plot';
 }
 
 KeyHammer::update_key () {

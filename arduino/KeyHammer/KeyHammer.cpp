@@ -91,7 +91,7 @@ void KeyHammer::update_key () {
   keyPosition = min(keyPosition, sensorMax);
   keyPosition = max(keyPosition, sensorMin);
 
-  keySpeed = (keyPosition - lastKeyPosition) / (double)elapsed);
+  keySpeed = (keyPosition - lastKeyPosition) / (double)elapsed;
 }
 
 void KeyHammer::update_hammer () {

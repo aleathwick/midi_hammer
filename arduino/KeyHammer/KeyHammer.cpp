@@ -86,7 +86,7 @@ KeyHammer::KeyHammer (Adafruit_MCP3008 adc, int pin, int pitch, int sensorFullyO
 
 void KeyHammer::update_key () {
   lastKeyPosition = keyPosition;
-  keyPosition = adcs.readADC(pin);
+  keyPosition = adc.readADC(pin);
   // constrain key position to be within the range determined by sensor max and min
   keyPosition = min(keyPosition, sensorMax);
   keyPosition = max(keyPosition, sensorMin);

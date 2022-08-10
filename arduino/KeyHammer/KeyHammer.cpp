@@ -84,7 +84,7 @@ KeyHammer::KeyHammer (Adafruit_MCP3008 adc, int pin, int pitch, int sensorFullyO
   printMode='plot';
 }
 
-KeyHammer::update_key () {
+void KeyHammer::update_key () {
   lastKeyPosition = keyPosition;
   keyPosition = adcs.readADC(pin);
   // constrain key position to be within the range determined by sensor max and min
@@ -94,7 +94,7 @@ KeyHammer::update_key () {
   keySpeed = (keyPosition - lastKeyPosition) / (double)elapsed);
 }
 
-KeyHammer::update_hammer () {
+void KeyHammer::update_hammer () {
   hammerSpeed = hammerSpeed - gravity * elapsed;
   hammerPosition = hammerPosition + hammerSpeed * elapsed;
   // check for interaction with key
@@ -110,7 +110,7 @@ KeyHammer::update_hammer () {
   }
 }
 
-KeyHammer::check_note_on () {
+void KeyHammer::check_note_on () {
   // check for note ons
   if ((hammerPosition < noteOnThreshold) == (sensorFullyOff > sensorFullyOn)) {
     // do something with hammer speed to get velocity
@@ -127,7 +127,7 @@ KeyHammer::check_note_on () {
     }
 }
 
-KeyHammer::check_note_off () {
+void KeyHammer::check_note_off () {
   if (noteOn){
     if ((keyPosition > noteOffThreshold) == (sensorFullyOff > sensorFullyOn)) {
       MIDI.sendNoteOff(pitch, 64, 1);
@@ -139,7 +139,7 @@ KeyHammer::check_note_off () {
   }
 }
 
-KeyHammer::step () {
+void KeyHammer::step () {
   update_key();
   update_hammer();
   check_note_on();

@@ -53,7 +53,7 @@ class KeyHammer
     elapsedMicros elapsed;
 };
 
-KeyHammer::KeyHammer (Adafruit_MCP3008 adc, int pin, int pitch, int sensorFullyOn=430, int sensorFullyOff=50, char printMode="") {
+KeyHammer::KeyHammer (Adafruit_MCP3008 adc, int pin, int pitch, int sensorFullyOn=430, int sensorFullyOff=50) {
   adc = adc;
   pin = pin;
   pitch = pitch;
@@ -81,7 +81,7 @@ KeyHammer::KeyHammer (Adafruit_MCP3008 adc, int pin, int pitch, int sensorFullyO
 
   elapsed = 0;
 
-  printMode=printMode;
+  printMode="plot";
 }
 
 KeyHammer::update_key () {

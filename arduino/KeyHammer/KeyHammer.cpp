@@ -1,9 +1,8 @@
 // https://cplusplus.com/doc/tutorial/classes/
 // https://paulmurraycbr.github.io/ArduinoTheOOWay.html
 // https://www.circuitbasics.com/programming-with-classes-and-objects-on-the-arduino/
-#include <Adafruit_MCP3008.h>
-#include <elapsedMillis.h>
-
+// #include <Adafruit_MCP3008.h>
+// #include <elapsedMillis.h>
 
 class KeyHammer
 {
@@ -81,7 +80,7 @@ KeyHammer::KeyHammer (Adafruit_MCP3008 adc, int pin, int pitch, int sensorFullyO
 
   elapsed = 0;
 
-  printMode='plot';
+  printMode='p';
 }
 
 void KeyHammer::update_key () {
@@ -119,7 +118,7 @@ void KeyHammer::check_note_on () {
     velocityIndex = min(velocityIndex, velocityMapLength);
     MIDI.sendNoteOn(pitch, velocityMap[velocityIndex], 1);
     noteOn = true;
-    if (printMode == "info"){ //&& ((i == 0 && j == 0) || (i == 1 && j == 2))){
+    if (printMode == 'i'){ //&& ((i == 0 && j == 0) || (i == 1 && j == 2))){
       Serial.printf("\n note on: hammerSpeed %f, velocityIndex %d, velocity %d pitch %d \n", velocity, velocityIndex, velocityMap[velocityIndex], pitch);
     }
     hammerPosition = noteOnThreshold;
@@ -131,7 +130,7 @@ void KeyHammer::check_note_off () {
   if (noteOn){
     if ((keyPosition > noteOffThreshold) == (sensorFullyOff > sensorFullyOn)) {
       MIDI.sendNoteOff(pitch, 64, 1);
-      if (printMode == "info"){
+      if (printMode == 'i'){
         Serial.printf("note off: noteOffThreshold %d, adcValue %d, velocity %d  pitch %d \n", noteOffThreshold, keyPosition, 64, pitch);
       }
       noteOn = false;
@@ -145,7 +144,7 @@ void KeyHammer::step () {
   check_note_on();
   check_note_off();
   // print some stuff
-  if (printMode == "plot"){
+  if (printMode == 'p'){
     // Serial.printf("%d %f %f ", keyPosition, hammerPosition, hammerSpeed);
     Serial.printf("hammer_%d:%f,", pitch, hammerPosition);
     Serial.printf("keySpeed_%d:%f,", pitch, keySpeed * 10000);

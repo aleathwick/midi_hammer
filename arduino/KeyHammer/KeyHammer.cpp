@@ -10,9 +10,13 @@ class KeyHammer
     // for how to make this work with mutliple types (MCP3008 or MCP3208), see here:
     // https://stackoverflow.com/questions/69441566/how-to-declare-a-class-member-that-may-be-one-of-two-classes
     Adafruit_MCP3008 adc;
+    // define the range of the sensors, with sensorFullyOn being the key fully depressed
+  // this will work regardless of sensorFullyOn < sensorFullyOff or sensorFullyOff < sensorFullyOn
     int sensorFullyOn;
     int sensorFullyOff;
+    // threshold for hammer to activate note
     int noteOnThreshold;
+    // threshold for key to trigger noteoff
     int noteOffThreshold;
     int sensorMin;
     int sensorMax;
@@ -22,6 +26,7 @@ class KeyHammer
     
     int keyPosition;
     int lastKeyPosition;
+    // key and hammer speeds are measured in adc bits per microsecond
     double keySpeed;
 
     int hammerPosition;
@@ -113,12 +118,14 @@ KeyHammer::check_note_on () {
 }
 
 KeyHammer::check_note_off () {
-  if ((keyPosition > noteOffThreshold) == (sensorFullyOff > sensorFullyOn)) {
-    MIDI.sendNoteOff(pitch, 64, 1);
-    if (!plotSerial){
-      Serial.printf("note off: noteOffThreshold %d, adcValue %d, velocity %d  pitch %d \n", noteOffThreshold, keyPosition, 64, pitch);
+  if (noteOn){
+    if ((keyPosition > noteOffThreshold) == (sensorFullyOff > sensorFullyOn)) {
+      MIDI.sendNoteOff(pitch, 64, 1);
+      if (!plotSerial){
+        Serial.printf("note off: noteOffThreshold %d, adcValue %d, velocity %d  pitch %d \n", noteOffThreshold, keyPosition, 64, pitch);
+      }
+      noteOn = false;
     }
-    noteOn = false;
   }
 }
 

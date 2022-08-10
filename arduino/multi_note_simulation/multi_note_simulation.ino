@@ -25,6 +25,8 @@
 // ADCs
 // MCP3208 adcs[2];
 Adafruit_MCP3008 adcs[2];
+int adcCount = 2;
+int adcSelects[] = { 22, 17 };
 
 // USB MIDI object
 Adafruit_USBD_MIDI usb_midi;
@@ -34,72 +36,31 @@ Adafruit_USBD_MIDI usb_midi;
 MIDI_CREATE_INSTANCE(Adafruit_USBD_MIDI, usb_midi, MIDI);
 
 
-// ADC and sensor set up
-const int adcCount = 1;  // n adcs
-const int adcBits = 2048;
-int adcSelects[] = { 22, 17 };     // pins for selecting adcs
-int adcSensorCounts[] = { 1, 2 };  // sensors per adc
-// last dimension must be at least of size max(adcSensorCounts)
-// may as well make it 8, the max possible
-int adcPins[][8] = { { 2 },// { 5, 6, 7 },
-                     { 0, 1 } };
-int adcNotes[][8] = { { 65, 66, 67 },
-                      { 68, 69, 70 } };
-// define the range of the sensors, with sensorFullyOn being the key fully depressed
-// this will work regardless of sensorFullyOn < sensorFullyOff or sensorFullyOff < sensorFullyOn
-const int sensorFullyOn = 430; //730;
-const int sensorFullyOff = 50; //2048;
-const int sensorLow = min(sensorFullyOn, sensorFullyOff);
-const int sensorHigh = max(sensorFullyOn, sensorFullyOff);
-
-// simulation parameters
-// threshold for hammer to activate note
-const int noteOnThreshold = sensorFullyOn + 1.2 * (sensorFullyOn - sensorFullyOff);
-// threshold for key to trigger noteoff
-const int noteOffThreshold = sensorFullyOn - 0.5 * (sensorFullyOn - sensorFullyOff);
-// gravity for hammer, measured in adc bits per microsecond per microsecond
-// if the key press is ADC_range, where ADC_range is abs(sensorFullyOn - sensorFullyOff)
-// hammer travel in mm; used to calculate gravity in adc bits
-const double hammer_travel = 4.5;
-const double gravity = (sensorFullyOn - sensorFullyOff) / (hammer_travel * (double)9810000000);
-
-// keeping track of simulation states
-// raw ADC - may apply some processing to signal
-int rawAdcValues[adcCount][8] = {0};
-// key positions
-int adcValues[adcCount][8] = {0};
-// https://forum.arduino.cc/t/initializing-an-array-of-structs-with-templates/478604
-// <> indicates a template object, from a template class
-// template classes can work with various data types
-// if I wanted circular buffers with different dtypes, I'd need to use a base class and derive CircularBuffer from that:
-// https://stackoverflow.com/questions/33507697/holding-template-class-objects-in-array 
-// https://stackoverflow.com/questions/12009314/how-to-create-an-array-of-templated-class-objects
-const int buffer_len = 25;
-CircularBuffer<int, buffer_len> rawAdcBuffers[adcCount][8];
-CircularBuffer<double, buffer_len> keySpeedBuffers[adcCount][8];
 
 
-// Window size is 2*m+1
-const size_t m = 12;
-// Polynomial Order
-const size_t n = 1;
-// Initial Point Smoothing (ie evaluate polynomial at first point in the window)
-// Points are defined in range [-m;m]
-const size_t t = m;
-// Derivation order? 0: no derivation, 1: first derivative, 2: second derivative...
-const int d = 0;
+
+//// circular buffer
+// const int buffer_len = 25;
+// CircularBuffer<int, buffer_len> rawAdcBuffers[adcCount][8];
+// CircularBuffer<double, buffer_len> keySpeedBuffers[adcCount][8];
+
+//// savitzky golay
+// // Window size is 2*m+1
+// const size_t m = 12;
+// // Polynomial Order
+// const size_t n = 1;
+// // Initial Point Smoothing (ie evaluate polynomial at first point in the window)
+// // Points are defined in range [-m;m]
+// const size_t t = m;
+// // Derivation order? 0: no derivation, 1: first derivative, 2: second derivative...
+// const int d = 0;
 
 // Real-time filter (filtering at latest data point)
 // gram_sg::SavitzkyGolayFilter filter(m, t, n, d);
 
-int lastAdcValues[adcCount][8] = {0};
-double keySpeedsFiltered[adcCount][8] = {0.0};
-double hammerPositions[adcCount][8] = {0};
-double hammerSpeeds[adcCount][8] = {0};
-bool noteOns[adcCount][8] = {0};
+
 // can turn to int like so: int micros = elapsed[i][j];
 // and reset to zero: elapsed[i][j] = 0;
-elapsedMicros elapsed[adcCount][8];
 elapsedMillis infoTimer;
 elapsedMicros loopTimer;
 
@@ -123,9 +84,177 @@ const bool plotSerial = true;
 // used to restrict printing to only a few iterations after certain events
 int printTime = 0;
 
-// initalize velocity variables
-double velocity;
-int velocityIndex;
+//////////////////////////////////////////////////////////////
+// https://cplusplus.com/doc/tutorial/classes/
+// https://paulmurraycbr.github.io/ArduinoTheOOWay.html
+// https://www.circuitbasics.com/programming-with-classes-and-objects-on-the-arduino/
+// #include <Adafruit_MCP3008.h>
+// #include <elapsedMillis.h>
+
+class KeyHammer
+{
+    // for how to make this work with mutliple types (MCP3008 or MCP3208), see here:
+    // https://stackoverflow.com/questions/69441566/how-to-declare-a-class-member-that-may-be-one-of-two-classes
+    Adafruit_MCP3008 adc;
+    // define the range of the sensors, with sensorFullyOn being the key fully depressed
+  // this will work regardless of sensorFullyOn < sensorFullyOff or sensorFullyOff < sensorFullyOn
+    int sensorFullyOn;
+    int sensorFullyOff;
+    // threshold for hammer to activate note
+    int noteOnThreshold;
+    // threshold for key to trigger noteoff
+    int noteOffThreshold;
+    int sensorMin;
+    int sensorMax;
+
+    int pin;
+    int pitch;
+    
+    int keyPosition;
+    int lastKeyPosition;
+    // key and hammer speeds are measured in adc bits per microsecond
+    double keySpeed;
+
+    double hammerPosition;
+    double hammerSpeed;
+    double hammer_travel;
+    double gravity;
+
+    bool noteOn;
+    double velocity;
+    int velocityIndex;
+
+    char printMode;
+
+
+    void update_key();
+    void update_hammer();
+    void check_note_on();
+    void check_note_off();
+
+  public:
+    KeyHammer(Adafruit_MCP3008 adc, int pin, int pitch, int sensorFullyOn, int sensorFullyOff);
+    void step();
+
+    elapsedMicros elapsed;
+};
+
+KeyHammer::KeyHammer (Adafruit_MCP3008 adc, int pin, int pitch, int sensorFullyOn=430, int sensorFullyOff=50) {
+  adc = adc;
+  pin = pin;
+  pitch = pitch;
+  sensorFullyOn = sensorFullyOn;
+  sensorFullyOff = sensorFullyOff;
+  sensorMax = max(sensorFullyOn, sensorFullyOff);
+  sensorMin = min(sensorFullyOn, sensorFullyOff);
+
+  noteOnThreshold = sensorFullyOn + 1.2 * (sensorFullyOn - sensorFullyOff);
+  noteOffThreshold = sensorFullyOn - 0.5 * (sensorFullyOn - sensorFullyOff);
+
+  // gravity for hammer, measured in adc bits per microsecond per microsecond
+  // if the key press is ADC_range, where ADC_range is abs(sensorFullyOn - sensorFullyOff)
+  // hammer travel in mm; used to calculate gravity in adc bits
+  hammer_travel = 4.5;
+  gravity = (sensorFullyOn - sensorFullyOff) / (hammer_travel * (double)9810000000);
+
+  keyPosition = sensorFullyOff;
+  lastKeyPosition = sensorFullyOff;
+  keySpeed = 0.0;
+  hammerPosition = sensorFullyOff;
+  hammerSpeed = 0.0;
+
+  noteOn = false;
+
+  elapsed = 0;
+
+  printMode='p';
+}
+
+void KeyHammer::update_key () {
+  lastKeyPosition = keyPosition;
+  keyPosition = adc.readADC(pin);
+  // constrain key position to be within the range determined by sensor max and min
+  keyPosition = min(keyPosition, sensorMax);
+  keyPosition = max(keyPosition, sensorMin);
+
+  keySpeed = (keyPosition - lastKeyPosition) / (double)elapsed;
+}
+
+void KeyHammer::update_hammer () {
+  hammerSpeed = hammerSpeed - gravity * elapsed;
+  hammerPosition = hammerPosition + hammerSpeed * elapsed;
+  // check for interaction with key
+  if ((hammerPosition > keyPosition) == (sensorFullyOff > sensorFullyOn)) {
+          hammerPosition = keyPosition;
+          // we could check to see if the hammer speed is greater then key speed, but probably not necessary
+          // after all, the key as 'caught up' to the hammer
+          // if ((hammerSpeed > keySpeed) == (sensorFullyOff > sensorFullyOn)) {
+            // if (abs(hammerSpeed) < abs(keySpeed)) {
+          hammerSpeed = keySpeed;
+          // }
+        // }
+  }
+}
+
+void KeyHammer::check_note_on () {
+  // check for note ons
+  if ((hammerPosition < noteOnThreshold) == (sensorFullyOff > sensorFullyOn)) {
+    // do something with hammer speed to get velocity
+    velocity = hammerSpeed;
+    velocityIndex = round(hammerSpeed * hammerSpeedScaler);
+    velocityIndex = min(velocityIndex, velocityMapLength);
+    MIDI.sendNoteOn(pitch, velocityMap[velocityIndex], 1);
+    noteOn = true;
+    if (printMode == 'i'){ //&& ((i == 0 && j == 0) || (i == 1 && j == 2))){
+      Serial.printf("\n note on: hammerSpeed %f, velocityIndex %d, velocity %d pitch %d \n", velocity, velocityIndex, velocityMap[velocityIndex], pitch);
+    }
+    hammerPosition = noteOnThreshold;
+    hammerSpeed = -hammerSpeed;
+    }
+}
+
+void KeyHammer::check_note_off () {
+  if (noteOn){
+    if ((keyPosition > noteOffThreshold) == (sensorFullyOff > sensorFullyOn)) {
+      MIDI.sendNoteOff(pitch, 64, 1);
+      if (printMode == 'i'){
+        Serial.printf("note off: noteOffThreshold %d, adcValue %d, velocity %d  pitch %d \n", noteOffThreshold, keyPosition, 64, pitch);
+      }
+      noteOn = false;
+    }
+  }
+}
+
+void KeyHammer::step () {
+  update_key();
+  update_hammer();
+  check_note_on();
+  check_note_off();
+  // print some stuff
+  if (printMode == 'p'){
+    // Serial.printf("%d %f %f ", keyPosition, hammerPosition, hammerSpeed);
+    Serial.printf("hammer_%d:%f,", pitch, hammerPosition);
+    Serial.printf("keySpeed_%d:%f,", pitch, keySpeed * 10000);
+    Serial.printf("hammerSpeed_%d:%f,", pitch, hammerSpeed * 10000);
+    // this newline may need to go after all keys have printed? I'm unsure how the serial plotter works.
+    Serial.print('\n');
+  }
+  elapsed = 0;
+}
+
+
+
+//////////////////////////////////////////////////////////////
+
+
+const int n_keys = 1;
+KeyHammer keys[1] = { { adcs[1], 2, 64 } };
+// KeyHammer[] keys = 
+//     new KeyHammer[] { new KeyHammer(adcs[1],2,64)};//,
+//                       // new KeyHammer(adc,pin,pitch) };
+
+
+
 
 void setup() {
   Serial.begin(57600);
@@ -137,17 +266,11 @@ void setup() {
   //  SPI.setRX(4);
   for (int i = 0; i < adcCount; i++) {
     adcs[i].begin(adcSelects[i]);
-    // fill in ADC buffers with the default value
-    for (int j = 0; j < adcSensorCounts[i]; j++) {
-      while(rawAdcBuffers[i][j].push(sensorFullyOff));
-      while(keySpeedBuffers[i][j].push(0.0));
-    }
   }
 
   pinMode(LED_BUILTIN, OUTPUT);
 
   usb_midi.setStringDescriptor("Laser Piano");
-  Serial.printf("noteOnThreshold: %d \n noteOffThreshold: %d \n gravity: %f \n", noteOnThreshold, noteOffThreshold, gravity);
 
   // Initialize MIDI, and listen to all MIDI channels
   // This will also call usb_midi's begin()
@@ -171,126 +294,14 @@ void setup() {
 // }
 
 void loop() {
-  // if (infoTimer >= 500) {
-  //   printInfo = true;
-  //   infoTimer = 0;
-  //   // Serial.print("\n");
-  // } else {
-  //   printInfo = false;
-  // }
   
-  if (elapsed[0][0] >= 2500) {
-  for (int i = 0; i < adcCount; i++) {
-    for (int j = 0; j < adcSensorCounts[i]; j++) {
-      if (elapsed[i][j] >= 5) {
-        // update key position and speed
-        lastAdcValues[i][j] = adcValues[i][j];
-        rawAdcBuffers[i][j].push(adcs[i].readADC(adcPins[i][j]));
-        // use raw adc values
-        adcValues[i][j] = rawAdcBuffers[i][j].last();
-        adcValues[i][j] = min(adcValues[i][j], sensorHigh);
-        adcValues[i][j] = max(adcValues[i][j], sensorLow);
-        // keySpeedsFiltered[i][j] = (adcValues[i][j] - lastAdcValues[i][j]) / (double)elapsed[i][j];
-        keySpeedBuffers[i][j].push((adcValues[i][j] - lastAdcValues[i][j]) / (double)elapsed[i][j]);
-        // filter the key speeds in some way
-        keySpeedsFiltered[i][j] = keySpeedBuffers[i][j].last();
-
-
-        if (!plotSerial && printInfo && i == 0 && j == 0) {
-          Serial.printf("keySpeed: %f elapsed: %d  double elapsed: %f \n", keySpeedBuffers[i][j].last(), (int)elapsed[i][j], (double)elapsed[i][j]);
-        }
-        // update hammer position
-        // gravity is measured in adc bits per millisecond
-        // key and hammer speeds are measured in adc bits per microsecond
-        hammerSpeeds[i][j] = hammerSpeeds[i][j] - gravity * elapsed[i][j];
-        // update according to hammer velocity
-        hammerPositions[i][j] = hammerPositions[i][j] + hammerSpeeds[i][j] * elapsed[i][j];
-
-        // hammer update based on interaction with key
-        if ((hammerPositions[i][j] > adcValues[i][j]) == (sensorFullyOff > sensorFullyOn)) {
-          hammerPositions[i][j] = adcValues[i][j];
-          // we could check to see if the hammer speed is greater then key speed, but probably not necessary
-          // after all, the key as 'caught up' to the hammer
-          // if ((hammerSpeeds[i][j] > keySpeedsFiltered[i][j]) == (sensorFullyOff > sensorFullyOn)) {
-            // if (abs(hammerSpeeds[i][j]) < abs(keySpeed)) {
-            hammerSpeeds[i][j] = keySpeedsFiltered[i][j];
-          // }
-        // }
-        }
-
-        // check for note ons
-        if ((hammerPositions[i][j] < noteOnThreshold) == (sensorFullyOff > sensorFullyOn)) {
-          // do something with hammer speed to get velocity
-          printTime = 0;
-          velocity = hammerSpeeds[i][j];
-          velocityIndex = round(hammerSpeeds[i][j] * hammerSpeedScaler);
-          velocityIndex = min(velocityIndex, velocityMapLength);
-          MIDI.sendNoteOn(adcNotes[i][j], velocityMap[velocityIndex], 1);
-          noteOns[i][j] = true;
-          if (!plotSerial){ //&& ((i == 0 && j == 0) || (i == 1 && j == 2))){
-            Serial.printf("\n note on: hammerSpeed %f, velocityIndex %d, velocity %d on adc %d sensor %d \n", velocity, velocityIndex, velocityMap[velocityIndex], i, j);
-          }
-          hammerPositions[i][j] = noteOnThreshold;
-          hammerSpeeds[i][j] = -hammerSpeeds[i][j];
-          }
-        
-        // check for note offs
-        if (noteOns[i][j]) {
-          if ((adcValues[i][j] > noteOffThreshold) == (sensorFullyOff > sensorFullyOn)) {
-            // could get key velocity for note off velocity
-            printTime = 0;
-            MIDI.sendNoteOff(adcNotes[i][j], 64, 1);
-            if (!plotSerial){
-              Serial.printf("note off: noteOffThreshold %d, adcValue %d, velocity %d on adc %d sensor %d \n", noteOffThreshold, adcValues[i][j], 64, i, j);
-            }
-            noteOns[i][j] = false;
-          }
-        }
-        // finally, reset timer for this sensor
-        // doing this at end may produce a low estimate of key speed (not set to zero immediately on adc read)
-        if (printTime > 3){
-          Serial.printf("elapsed:%d,", (int)elapsed[i][j]);
-        }
-        elapsed[i][j] = 0;
-
-        // possibly print some stuff
-        if (!(plotSerial) && printInfo) {
-          Serial.printf("%d %f %f ", adcValues[i][j], hammerPositions[i][j], hammerSpeeds[i][j]);
-        }
-      
-      }
+  if (keys[0].elapsed >= 2500) {
+    for (int i = 0; i < n_keys; i++) {
+      keys[i].step();
     }
-  }
-
-  // post simulation loop, do some printing
-  printTime += 1;
-  if (plotSerial && printInfo && (printTime > 3)){
-    // Serial.printf("hammer:%f\n", hammerPositions[0][0]);
-    // Serial.printf("key:%d hammer:%f hammerSpeed:%f\n", adcValues[0][0], hammerPositions[0][0], abs(hammerSpeeds[0][0]) * 20000);
-    // Serial.printf("loopTimer:%d,", (int)loopTimer);
-
-    // for (int i = adcCount-1; i < adcCount; i++) {
-    //   for (int j = adcSensorCounts[i]-1; j < adcSensorCounts[i]; j++) {
-    for (int i = 0; i < adcCount; i++) {
-      for (int j = 0; j < adcSensorCounts[i]; j++) {
-        Serial.printf("key_%d_%d:%d,", i, j, adcValues[i][j]);
-        // Serial.printf("ADC_%d_%d:%d,", i, j, rawAdcBuffers[i][j].last());
-        Serial.printf("hammer_%d_%d:%f,", i, j, hammerPositions[i][j]);
-        Serial.printf("keySpeed_%d_%d:%f,", i, j, keySpeedsFiltered[i][j] * 10000);
-        Serial.printf("hammerSpeed_%d_%d:%f,", i, j, hammerSpeeds[i][j] * 10000);
-        
-        // Serial.printf("hammerSpeed_%d_%d:%f,", i, j, hammerPositions[i][j]);
-
-        
-      }
-    }
-    Serial.print('\n');
-    printTime = 0;
-  }
-    
-  loopTimer = 0;
-  // read any new MIDI messages
-  MIDI.read();
+    loopTimer = 0;
+    // read any new MIDI messages
+    MIDI.read();
   }
 }
   

@@ -31,6 +31,8 @@ class KeyHammer
 
     double hammerPosition;
     double hammerSpeed;
+    double hammer_travel;
+    double gravity;
 
     elapsedMicros elapsed;
 
@@ -64,6 +66,12 @@ KeyHammer::KeyHammer (Adafruit_MCP3008 adc, int pin, int pitch, int sensorFullyO
 
   noteOnThreshold = sensorFullyOn + 1.2 * (sensorFullyOn - sensorFullyOff);
   noteOffThreshold = sensorFullyOn - 0.5 * (sensorFullyOn - sensorFullyOff);
+
+  // gravity for hammer, measured in adc bits per microsecond per microsecond
+  // if the key press is ADC_range, where ADC_range is abs(sensorFullyOn - sensorFullyOff)
+  // hammer travel in mm; used to calculate gravity in adc bits
+  hammer_travel = 4.5;
+  gravity = (sensorFullyOn - sensorFullyOff) / (hammer_travel * (double)9810000000);
 
   keyPosition = sensorFullyOff;
   lastKeyPosition = sensorFullyOff;

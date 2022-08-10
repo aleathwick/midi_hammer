@@ -34,8 +34,6 @@ class KeyHammer
     double hammer_travel;
     double gravity;
 
-    elapsedMicros elapsed;
-
     bool noteOn;
     double velocity;
     int velocityIndex;

@@ -95,7 +95,9 @@ class KeyHammer
 {
     // for how to make this work with mutliple types (MCP3008 or MCP3208), see here:
     // https://stackoverflow.com/questions/69441566/how-to-declare-a-class-member-that-may-be-one-of-two-classes
-    Adafruit_MCP3008 adc;
+    // for using a reference to an adc, need to use constructor initializer list; see here:
+    // https://stackoverflow.com/questions/15403815/how-to-initialize-the-reference-member-variable-of-a-class
+    Adafruit_MCP3008 &adc;
     // define the range of the sensors, with sensorFullyOn being the key fully depressed
   // this will work regardless of sensorFullyOn < sensorFullyOff or sensorFullyOff < sensorFullyOn
     int sensorFullyOn;
@@ -110,6 +112,7 @@ class KeyHammer
     int pin;
     int pitch;
     
+    int rawADC;
     int keyPosition;
     int lastKeyPosition;
     // key and hammer speeds are measured in adc bits per microsecond
@@ -131,20 +134,19 @@ class KeyHammer
     void update_hammer();
     void check_note_on();
     void check_note_off();
+    void test();
 
   public:
-    KeyHammer(Adafruit_MCP3008 adc, int pin, int pitch, int sensorFullyOn, int sensorFullyOff);
+    KeyHammer(Adafruit_MCP3008 &adc, int pin, int pitch, int sensorFullyOn, int sensorFullyOff);
     void step();
 
     elapsedMicros elapsed;
 };
 
-KeyHammer::KeyHammer (Adafruit_MCP3008 adc, int pin, int pitch, int sensorFullyOn=430, int sensorFullyOff=50) {
-  adc = adc;
-  pin = pin;
-  pitch = pitch;
-  sensorFullyOn = sensorFullyOn;
-  sensorFullyOff = sensorFullyOff;
+// use a constructor initializer list for adc, otherwise the reference won't work
+KeyHammer::KeyHammer (Adafruit_MCP3008 &adc, int pin, int pitch, int sensorFullyOn=430, int sensorFullyOff=50)
+  : adc(adc), pin(pin), pitch(pitch), sensorFullyOn(sensorFullyOn), sensorFullyOff(sensorFullyOff) {
+
   sensorMax = max(sensorFullyOn, sensorFullyOff);
   sensorMin = min(sensorFullyOn, sensorFullyOff);
 
@@ -159,6 +161,7 @@ KeyHammer::KeyHammer (Adafruit_MCP3008 adc, int pin, int pitch, int sensorFullyO
 
   keyPosition = sensorFullyOff;
   lastKeyPosition = sensorFullyOff;
+  rawADC = sensorFullyOff;
   keySpeed = 0.0;
   hammerPosition = sensorFullyOff;
   hammerSpeed = 0.0;
@@ -172,7 +175,8 @@ KeyHammer::KeyHammer (Adafruit_MCP3008 adc, int pin, int pitch, int sensorFullyO
 
 void KeyHammer::update_key () {
   lastKeyPosition = keyPosition;
-  keyPosition = adc.readADC(pin);
+  rawADC = adc.readADC(pin);
+  keyPosition = rawADC;
   // constrain key position to be within the range determined by sensor max and min
   keyPosition = min(keyPosition, sensorMax);
   keyPosition = max(keyPosition, sensorMin);
@@ -228,6 +232,7 @@ void KeyHammer::check_note_off () {
 void KeyHammer::step () {
   update_key();
   update_hammer();
+  // test();
   check_note_on();
   check_note_off();
   // print some stuff
@@ -236,10 +241,16 @@ void KeyHammer::step () {
     Serial.printf("hammer_%d:%f,", pitch, hammerPosition);
     Serial.printf("keySpeed_%d:%f,", pitch, keySpeed * 10000);
     Serial.printf("hammerSpeed_%d:%f,", pitch, hammerSpeed * 10000);
+    Serial.printf("rawADC_%d:%d,", pitch, rawADC);
+    Serial.printf("pin_%d:%d,", pitch, pin);
     // this newline may need to go after all keys have printed? I'm unsure how the serial plotter works.
     Serial.print('\n');
   }
   elapsed = 0;
+}
+
+void KeyHammer::test () {
+  Serial.printf("value:%d\n", adc.readADC(pin));
 }
 
 
@@ -248,7 +259,7 @@ void KeyHammer::step () {
 
 
 const int n_keys = 1;
-KeyHammer keys[1] = { { adcs[1], 2, 64 } };
+KeyHammer keys[1] = { { adcs[0], 2, 64 } };
 // KeyHammer[] keys = 
 //     new KeyHammer[] { new KeyHammer(adcs[1],2,64)};//,
 //                       // new KeyHammer(adc,pin,pitch) };

@@ -97,6 +97,11 @@ class KeyHammer
     // https://stackoverflow.com/questions/69441566/how-to-declare-a-class-member-that-may-be-one-of-two-classes
     // for using a reference to an adc, need to use constructor initializer list; see here:
     // https://stackoverflow.com/questions/15403815/how-to-initialize-the-reference-member-variable-of-a-class
+    // could extend this to work with a variety of different ADCs
+    // maybe take in an ADC reading function as an argument, instead of an ADC object
+    // how to make this a reference to a function? 
+    // https://stackoverflow.com/questions/44289057/need-to-assign-function-to-variable-in-c
+    // or maybe make some derived classes for different ADC types
     Adafruit_MCP3008 &adc;
     // define the range of the sensors, with sensorFullyOn being the key fully depressed
   // this will work regardless of sensorFullyOn < sensorFullyOff or sensorFullyOff < sensorFullyOn

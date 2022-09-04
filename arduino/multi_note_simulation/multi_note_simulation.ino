@@ -70,7 +70,8 @@ elapsedMicros loopTimer;
 // scale 
 
 // this and over will result in velocity of 127
-const double maxHammerSpeed = 0.06; // adc bits per microsecond
+// 0.06 about right for piano, foot drum is more like 0.04
+const double maxHammerSpeed = 0.04; // adc bits per microsecond
 const int velocityMapLength = 1024;
 const double logBase = 5; // base used for log multiplier, with 1 setting the multiplier to always 1
 int velocityMap[velocityMapLength];
@@ -132,36 +133,46 @@ class KeyHammer
     double velocity;
     int velocityIndex;
 
+    // parameters for pedal mode
+    int lastControlValue;
+    int controlValue;
+
     char printMode;
 
 
     void update_key();
+    void update_keyspeed();
     void update_hammer();
     void check_note_on();
     void check_note_off();
     void test();
+    void step_hammer();
+    void step_key();
+    void step_pedal();
 
   public:
-    KeyHammer(Adafruit_MCP3008 &adc, int pin, int pitch, int sensorFullyOn, int sensorFullyOff);
+    KeyHammer(Adafruit_MCP3008 &adc, int pin, int pitch, char operationMode, int sensorFullyOn, int sensorFullyOff);
     void step();
+    // operation mode switches between operation as a hammer simulation key, a key, or a pedal
+    char operationMode;
 
     elapsedMicros elapsed;
 };
 
 // use a constructor initializer list for adc, otherwise the reference won't work
-KeyHammer::KeyHammer (Adafruit_MCP3008 &adc, int pin, int pitch, int sensorFullyOn=430, int sensorFullyOff=50)
-  : adc(adc), pin(pin), pitch(pitch), sensorFullyOn(sensorFullyOn), sensorFullyOff(sensorFullyOff) {
+KeyHammer::KeyHammer (Adafruit_MCP3008 &adc, int pin, int pitch, char operationMode='h', int sensorFullyOn=430, int sensorFullyOff=50)
+  : adc(adc), pin(pin), pitch(pitch), operationMode(operationMode), sensorFullyOn(sensorFullyOn), sensorFullyOff(sensorFullyOff) {
 
   sensorMax = max(sensorFullyOn, sensorFullyOff);
   sensorMin = min(sensorFullyOn, sensorFullyOff);
 
-  noteOnThreshold = sensorFullyOn + 1.2 * (sensorFullyOn - sensorFullyOff);
+  noteOnThreshold = sensorFullyOn + 0.06 * (sensorFullyOn - sensorFullyOff);
   noteOffThreshold = sensorFullyOn - 0.5 * (sensorFullyOn - sensorFullyOff);
 
   // gravity for hammer, measured in adc bits per microsecond per microsecond
   // if the key press is ADC_range, where ADC_range is abs(sensorFullyOn - sensorFullyOff)
   // hammer travel in mm; used to calculate gravity in adc bits
-  hammer_travel = 4.5;
+  hammer_travel = 0.2;
   gravity = (sensorFullyOn - sensorFullyOff) / (hammer_travel * (double)9810000000);
 
   keyPosition = sensorFullyOff;
@@ -175,6 +186,9 @@ KeyHammer::KeyHammer (Adafruit_MCP3008 &adc, int pin, int pitch, int sensorFully
 
   elapsed = 0;
 
+  lastControlValue = 0;
+  controlValue = 0;
+
   printMode='p';
 }
 
@@ -186,6 +200,9 @@ void KeyHammer::update_key () {
   keyPosition = min(keyPosition, sensorMax);
   keyPosition = max(keyPosition, sensorMin);
 
+}
+
+void KeyHammer::update_keyspeed () {
   keySpeed = (keyPosition - lastKeyPosition) / (double)elapsed;
 }
 
@@ -212,7 +229,7 @@ void KeyHammer::check_note_on () {
     velocity = hammerSpeed;
     velocityIndex = round(hammerSpeed * hammerSpeedScaler);
     velocityIndex = min(velocityIndex, velocityMapLength);
-    MIDI.sendNoteOn(pitch, velocityMap[velocityIndex], 1);
+    MIDI.sendNoteOn(pitch, velocityMap[velocityIndex], 2);
     noteOn = true;
     if (printMode == 'i'){ //&& ((i == 0 && j == 0) || (i == 1 && j == 2))){
       Serial.printf("\n note on: hammerSpeed %f, velocityIndex %d, velocity %d pitch %d \n", velocity, velocityIndex, velocityMap[velocityIndex], pitch);
@@ -225,7 +242,7 @@ void KeyHammer::check_note_on () {
 void KeyHammer::check_note_off () {
   if (noteOn){
     if ((keyPosition > noteOffThreshold) == (sensorFullyOff > sensorFullyOn)) {
-      MIDI.sendNoteOff(pitch, 64, 1);
+      MIDI.sendNoteOff(pitch, 64, 2);
       if (printMode == 'i'){
         Serial.printf("note off: noteOffThreshold %d, adcValue %d, velocity %d  pitch %d \n", noteOffThreshold, keyPosition, 64, pitch);
       }
@@ -234,8 +251,9 @@ void KeyHammer::check_note_off () {
   }
 }
 
-void KeyHammer::step () {
+void KeyHammer::step_hammer () {
   update_key();
+  update_keyspeed();
   update_hammer();
   // test();
   check_note_on();
@@ -244,14 +262,54 @@ void KeyHammer::step () {
   if (printMode == 'p'){
     // Serial.printf("%d %f %f ", keyPosition, hammerPosition, hammerSpeed);
     Serial.printf("hammer_%d:%f,", pitch, hammerPosition);
-    Serial.printf("keySpeed_%d:%f,", pitch, keySpeed * 10000);
-    Serial.printf("hammerSpeed_%d:%f,", pitch, hammerSpeed * 10000);
+    // Serial.printf("keySpeed_%d:%f,", pitch, keySpeed * 10000);
+    // Serial.printf("hammerSpeed_%d:%f,", pitch, hammerSpeed * 10000);
     Serial.printf("rawADC_%d:%d,", pitch, rawADC);
-    Serial.printf("pin_%d:%d,", pitch, pin);
+    Serial.printf("elapsed_%d:%d,", pitch, (int)elapsed);
+    // Serial.printf("pin_%d:%d,", pitch, pin);
     // this newline may need to go after all keys have printed? I'm unsure how the serial plotter works.
-    Serial.print('\n');
+    // Serial.print('\n');
   }
   elapsed = 0;
+}
+
+
+void KeyHammer::step_pedal () {
+  update_key();
+  lastControlValue = controlValue;
+  // this could be sped up by precomputing the possible values
+  controlValue = (int)((keyPosition - sensorFullyOff) / double(sensorFullyOn - sensorFullyOff) * 127);
+  if (controlValue != lastControlValue) {
+    // control numbers:
+    // 1 = Modulation wheel
+    // 2 = Breath Control
+    // 7 = Volume
+    // 10 = Pan
+    // 11 = Expression
+    // 64 = Sustain Pedal (on/off)
+    // 65 = Portamento (on/off)
+    // 71 = Resonance (filter)
+    // 74 = Frequency Cutoff (filter)
+    MIDI.sendControlChange(	64, controlValue, 2);
+  }
+  // print some stuff
+  if (printMode == 'p'){
+    Serial.printf("key_%d:%f,", pitch, keyPosition);
+    Serial.printf("rawADC_%d:%d,", pitch, rawADC);
+    Serial.printf("elapsed_%d:%d,", pitch, (int)elapsed);
+    Serial.printf("controlValue_%d:%d,", controlValue, (int)elapsed);
+  }
+  elapsed = 0;
+}
+
+void KeyHammer::step () {
+  if (operationMode=='h')
+  {
+    step_hammer();
+  } else if (operationMode=='p')
+  {
+    step_pedal();
+  }
 }
 
 void KeyHammer::test () {
@@ -264,12 +322,32 @@ void KeyHammer::test () {
 
 
 const int n_keys = 1;
-KeyHammer keys[1] = { { adcs[0], 2, 64 } };
-// KeyHammer[] keys = 
-//     new KeyHammer[] { new KeyHammer(adcs[1],2,64)};//,
-//                       // new KeyHammer(adc,pin,pitch) };
+// KeyHammer keys[] = { { adcs[0], 4, 60 },
+//                        { adcs[0], 3, 61 },
+//                        { adcs[0], 2, 62 },
+//                        { adcs[0], 1, 63 },
+//                        { adcs[0], 0, 64 },
+//                        { adcs[1], 7, 65 },
+//                        { adcs[1], 6, 66 },
+//                        { adcs[1], 5, 67 },
+//                        { adcs[1], 4, 68 },
+//                        { adcs[1], 3, 69 },
+//                        { adcs[1], 2, 70 },
+//                        { adcs[1], 1, 71 },
+//                        { adcs[1], 0, 72 }};
 
+KeyHammer keys[] = { { adcs[1], 7, 36, 'p', 1010, 0 }};
 
+void change_mode () {
+  // Serial.print("Interrupt ");
+  // Serial.print(y++);
+  // Serial.println();
+  if (digitalRead(28) == 1) {
+    keys[0].operationMode = 'h';
+  } else {
+    keys[0].operationMode = 'p';
+  }
+}
 
 
 void setup() {
@@ -300,6 +378,13 @@ void setup() {
     velocityMap[i] = round(127 * i / (double)velocityMapLength);
   }
 
+  pinMode(28, INPUT_PULLUP);
+  // can then read this pin like so
+  // int sensorVal = digitalRead(28);
+
+  //interrupt for toggling mode 
+  attachInterrupt(digitalPinToInterrupt(28), change_mode, CHANGE);
+
   // wait until device mounted
   while (!USBDevice.mounted()) delay(1);
 }
@@ -315,6 +400,7 @@ void loop() {
     for (int i = 0; i < n_keys; i++) {
       keys[i].step();
     }
+    Serial.print('\n');
     loopTimer = 0;
     // read any new MIDI messages
     MIDI.read();
@@ -326,5 +412,8 @@ void loop() {
 //   // uint32_t rp2040.fifo.pop() will block if the FIFO is empty, there is also a bool rp2040.fifo.pop_nb version
 //   Serial.printf("C1: Read value from FIFO: %d\n", rp2040.fifo.pop());
 //   // int rp2040.fifo.available() - get number of values available in this core's FIFO
+
+// Just need: index in velocity lookup table
+// pitch to be sent
   
 // }

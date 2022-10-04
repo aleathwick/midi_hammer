@@ -92,18 +92,16 @@ int printTime = 0;
 // #include <Adafruit_MCP3008.h>
 // #include <elapsedMillis.h>
 
+int testFunction() {
+  // test function for getting key position
+  return 200;
+}
+
 class KeyHammer
 {
-    // for how to make this work with mutliple types (MCP3008 or MCP3208), see here:
-    // https://stackoverflow.com/questions/69441566/how-to-declare-a-class-member-that-may-be-one-of-two-classes
-    // for using a reference to an adc, need to use constructor initializer list; see here:
-    // https://stackoverflow.com/questions/15403815/how-to-initialize-the-reference-member-variable-of-a-class
-    // could extend this to work with a variety of different ADCs
-    // maybe take in an ADC reading function as an argument, instead of an ADC object
-    // how to make this a reference to a function? 
-    // https://stackoverflow.com/questions/44289057/need-to-assign-function-to-variable-in-c
-    // or maybe make some derived classes for different ADC types
-    Adafruit_MCP3008 &adc;
+    // a pointer to a function that will return the position of the key
+    // see here: https://forum.arduino.cc/t/function-as-a-parameter-in-class-object-function-pointer-in-library/461967/7
+    int(*adcFnPtr)(void);
     // define the range of the sensors, with sensorFullyOn being the key fully depressed
   // this will work regardless of sensorFullyOn < sensorFullyOff or sensorFullyOff < sensorFullyOn
     int sensorFullyOn;
@@ -151,17 +149,18 @@ class KeyHammer
     void step_pedal();
 
   public:
-    KeyHammer(Adafruit_MCP3008 &adc, int pin, int pitch, char operationMode, int sensorFullyOn, int sensorFullyOff);
+    KeyHammer(int(*adcFnPtr)(void), int pin, int pitch, char operationMode, int sensorFullyOn, int sensorFullyOff);
     void step();
     // operation mode switches between operation as a hammer simulation key, a key, or a pedal
     char operationMode;
+    int getAdcValue(void);
 
     elapsedMicros elapsed;
 };
 
 // use a constructor initializer list for adc, otherwise the reference won't work
-KeyHammer::KeyHammer (Adafruit_MCP3008 &adc, int pin, int pitch, char operationMode='h', int sensorFullyOn=430, int sensorFullyOff=50)
-  : adc(adc), pin(pin), pitch(pitch), operationMode(operationMode), sensorFullyOn(sensorFullyOn), sensorFullyOff(sensorFullyOff) {
+KeyHammer::KeyHammer (int(*adcFnPtr)(void), int pin, int pitch, char operationMode='h', int sensorFullyOn=430, int sensorFullyOff=50)
+  : adcFnPtr(adcFnPtr), pin(pin), pitch(pitch), operationMode(operationMode), sensorFullyOn(sensorFullyOn), sensorFullyOff(sensorFullyOff) {
 
   sensorMax = max(sensorFullyOn, sensorFullyOff);
   sensorMin = min(sensorFullyOn, sensorFullyOff);
@@ -194,7 +193,7 @@ KeyHammer::KeyHammer (Adafruit_MCP3008 &adc, int pin, int pitch, char operationM
 
 void KeyHammer::update_key () {
   lastKeyPosition = keyPosition;
-  rawADC = adc.readADC(pin);
+  rawADC = getAdcValue();
   keyPosition = rawADC;
   // constrain key position to be within the range determined by sensor max and min
   keyPosition = min(keyPosition, sensorMax);
@@ -313,7 +312,11 @@ void KeyHammer::step () {
 }
 
 void KeyHammer::test () {
-  Serial.printf("value:%d\n", adc.readADC(pin));
+  Serial.printf("value:%d\n", getAdcValue());
+}
+
+int KeyHammer::getAdcValue () {
+  return adcFnPtr();
 }
 
 
@@ -336,7 +339,7 @@ const int n_keys = 1;
 //                        { adcs[1], 1, 71 },
 //                        { adcs[1], 0, 72 }};
 
-KeyHammer keys[] = { { adcs[1], 7, 36, 'p', 1010, 0 }};
+KeyHammer keys[] = { { testFunction, 7, 36, 'p', 1010, 0 }};
 
 void change_mode () {
   // Serial.print("Interrupt ");

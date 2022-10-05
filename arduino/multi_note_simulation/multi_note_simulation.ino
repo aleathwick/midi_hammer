@@ -92,9 +92,10 @@ int printTime = 0;
 // #include <Adafruit_MCP3008.h>
 // #include <elapsedMillis.h>
 
+elapsedMillis testAdcTimer;
 int testFunction() {
   // test function for getting key position
-  return 200;
+  return (int)(sin(testAdcTimer / (double)300) * 512) + 512;
 }
 
 class KeyHammer

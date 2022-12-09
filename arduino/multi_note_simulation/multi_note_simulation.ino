@@ -19,6 +19,7 @@
 // to do:
 // try filtering 
 // circular buffer - store previous values
+#include "KeyHammer.h"
 
 
 

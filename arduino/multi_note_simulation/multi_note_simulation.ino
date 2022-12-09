@@ -11,14 +11,8 @@
 // elapsedMillis: https://github.com/pfeerick/elapsedMillis
 #include <elapsedMillis.h>
 // CircularBuffer: https://github.com/rlogiacco/CircularBuffer
-#include <CircularBuffer.h>
 // for log
 #include <math.h>
-// #include <gram_savitzky_golay.h>
-
-// to do:
-// try filtering 
-// circular buffer - store previous values
 #include "KeyHammer.h"
 
 
@@ -37,27 +31,6 @@ Adafruit_USBD_MIDI usb_midi;
 MIDI_CREATE_INSTANCE(Adafruit_USBD_MIDI, usb_midi, MIDI);
 
 
-
-
-
-//// circular buffer
-// const int buffer_len = 25;
-// CircularBuffer<int, buffer_len> rawAdcBuffers[adcCount][8];
-// CircularBuffer<double, buffer_len> keySpeedBuffers[adcCount][8];
-
-//// savitzky golay
-// // Window size is 2*m+1
-// const size_t m = 12;
-// // Polynomial Order
-// const size_t n = 1;
-// // Initial Point Smoothing (ie evaluate polynomial at first point in the window)
-// // Points are defined in range [-m;m]
-// const size_t t = m;
-// // Derivation order? 0: no derivation, 1: first derivative, 2: second derivative...
-// const int d = 0;
-
-// Real-time filter (filtering at latest data point)
-// gram_sg::SavitzkyGolayFilter filter(m, t, n, d);
 
 
 // can turn to int like so: int micros = elapsed[i][j];

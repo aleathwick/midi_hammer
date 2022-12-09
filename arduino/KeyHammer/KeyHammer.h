@@ -63,6 +63,7 @@ class KeyHammer
     // operation mode switches between operation as a hammer simulation key, a key, or a pedal
     char operationMode;
     int getAdcValue(void);
+    void generateVelocityMap();
 
     elapsedMicros elapsed;
 };

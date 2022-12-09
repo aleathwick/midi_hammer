@@ -6,6 +6,19 @@
 // #include <Adafruit_MCP3008.h>
 // #include <elapsedMillis.h>
 
+// set up map of velocities, mapping from hammer speed to midi value
+// hammer speed seems to range from ~0.005 to ~0.05 adc bits per microsecond
+// ~5 to ~50 adc bits per millisecond, ~5000 to ~50,000 adc bits per second
+// scale 
+
+// this and over will result in velocity of 127
+// 0.06 about right for piano, foot drum is more like 0.04
+const double maxHammerSpeed = 0.04; // adc bits per microsecond
+const int velocityMapLength = 1024;
+const double logBase = 5; // base used for log multiplier, with 1 setting the multiplier to always 1
+int velocityMap[velocityMapLength];
+// used to put hammer speed on an appropriate scale for indexing into velocityMap
+double hammerSpeedScaler = velocityMapLength / maxHammerSpeed;
 
 // use a constructor initializer list for adc, otherwise the reference won't work
 KeyHammer::KeyHammer (int(*adcFnPtr)(void), int pin, int pitch, char operationMode='h', int sensorFullyOn=430, int sensorFullyOff=50)
@@ -38,6 +51,12 @@ KeyHammer::KeyHammer (int(*adcFnPtr)(void), int pin, int pitch, char operationMo
   controlValue = 0;
 
   printMode='p';
+
+  // initialize velocity map
+  if (velocityMap[velocityMapLength-1] == 0) {
+    generateVelocityMap()
+  }
+
 }
 
 void KeyHammer::update_key () {
@@ -168,7 +187,13 @@ int KeyHammer::getAdcValue () {
   return adcFnPtr();
 }
 
-for (int i = 0; i < 5; i++)
-{
-  
+void KeyHammer::generateVelocityMap () {
+  // generate values for velocity map
+  double logMultiplier;
+  for (int i = 0; i < velocityMapLength; i++) {
+    // logMultiplier will always be between 0 and 1
+    logMultiplier = log(i / (double)velocityMapLength * (logBase - 1) + 1) / log(logBase);
+    velocityMap[i] = round(127 * i / (double)velocityMapLength);
+  }
 }
+

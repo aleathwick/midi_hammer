@@ -75,13 +75,16 @@ const int n_keys = 1;
 //                        { adcs[1], 1, 71 },
 //                        { adcs[1], 0, 72 }};
 
-KeyHammer keys[] = { { testFunction, 7, 36, 'p', 1010, 0 }};
+KeyHammer keys[] = { { []() -> int { return analogRead(28); }, 7, 36, 'p', 1010, 0 },
+                    { []() -> int { return analogRead(27); }, 7, 36, 'p', 1010, 0 },
+                    { []() -> int { return analogRead(26); }, 7, 36, 'p', 1010, 0 },
+                  };
 
 void change_mode () {
   // Serial.print("Interrupt ");
   // Serial.print(y++);
   // Serial.println();
-  if (digitalRead(28) == 1) {
+  if (digitalRead(15) == 1) {
     keys[0].operationMode = 'h';
   } else {
     keys[0].operationMode = 'p';
@@ -109,12 +112,12 @@ void setup() {
   // This will also call usb_midi's begin()
   MIDI.begin(MIDI_CHANNEL_OMNI);
 
-  pinMode(28, INPUT_PULLUP);
+  pinMode(15, INPUT_PULLUP);
   // can then read this pin like so
   // int sensorVal = digitalRead(28);
 
   //interrupt for toggling mode 
-  attachInterrupt(digitalPinToInterrupt(28), change_mode, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(15), change_mode, CHANGE);
 
   // wait until device mounted
   while (!USBDevice.mounted()) delay(1);

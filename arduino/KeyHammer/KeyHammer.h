@@ -5,6 +5,9 @@
 #pragma once
 #include <elapsedMillis.h>
 #include "MIDI.h"
+#include <Adafruit_TinyUSB.h>
+// Define the MIDI interface
+extern MIDI_NAMESPACE::MidiInterface<midi::SerialMIDI<Adafruit_USBD_MIDI>> MIDI; 
 
 class KeyHammer
 {

@@ -54,7 +54,7 @@ KeyHammer::KeyHammer (int(*adcFnPtr)(void), int pin, int pitch, char operationMo
 
   // initialize velocity map
   if (velocityMap[velocityMapLength-1] == 0) {
-    generateVelocityMap()
+    generateVelocityMap();
   }
 
 }
@@ -155,9 +155,10 @@ void KeyHammer::step_pedal () {
     // 11 = Expression
     // 64 = Sustain Pedal (on/off)
     // 65 = Portamento (on/off)
+    // 67 = Soft Pedal
     // 71 = Resonance (filter)
     // 74 = Frequency Cutoff (filter)
-    MIDI.sendControlChange(	64, controlValue, 2);
+    MIDI.sendControlChange(	controlNumber, controlValue, 2);
   }
   // print some stuff
   if (printMode == 'p'){

@@ -67,6 +67,7 @@ class KeyHammer
     char operationMode;
     int getAdcValue(void);
     void generateVelocityMap();
+    int controlNumber;
 
     elapsedMicros elapsed;
 };

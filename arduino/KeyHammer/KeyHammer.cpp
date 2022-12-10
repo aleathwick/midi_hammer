@@ -49,6 +49,8 @@ KeyHammer::KeyHammer (int(*adcFnPtr)(void), int pin, int pitch, char operationMo
 
   lastControlValue = 0;
   controlValue = 0;
+  // default to 64 (sustain); manually change if necessary
+  controlNumber = 64;
 
   printMode='p';
 

@@ -44,7 +44,7 @@ bool printInfo = true;
 // whether to use print statements for arduino serial plotter; if false, print text and disregard serial plotter formatting
 const bool plotSerial = true;
 // used to restrict printing to only a few iterations after certain events
-int printTime = 0;
+elapsedMillis printTimer = 0;
 
 //////////////////////////////////////////////////////////////
 // https://cplusplus.com/doc/tutorial/classes/
@@ -129,12 +129,24 @@ void setup() {
 // }
 
 void loop() {
-  
+  if (printTimer > 50) {
+    printInfo = true;
+  }
+
   if (keys[0].elapsed >= 2500) {
     for (int i = 0; i < n_keys; i++) {
       keys[i].step();
+
+      if (printInfo) {
+        keys[i].printState();
+      }
     }
-    Serial.print('\n');
+
+    if (printInfo) {
+      Serial.print('\n');
+      printInfo = false;
+    }
+    
     loopTimer = 0;
     // read any new MIDI messages
     MIDI.read();

@@ -47,7 +47,8 @@ class KeyHammer
     int lastControlValue;
     int controlValue;
 
-    char printMode;
+    // whether or not to print note on/offs
+    bool printNotes;
 
 
     void update_key();
@@ -68,6 +69,7 @@ class KeyHammer
     int getAdcValue(void);
     void generateVelocityMap();
     int controlNumber;
+    void printState();
 
     elapsedMicros elapsed;
 };

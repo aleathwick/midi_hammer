@@ -52,7 +52,7 @@ KeyHammer::KeyHammer (int(*adcFnPtr)(void), int pin, int pitch, char operationMo
   // default to 64 (sustain); manually change if necessary
   controlNumber = 64;
 
-  printMode='p';
+  printNotes=false;
 
   // initialize velocity map
   if (velocityMap[velocityMapLength-1] == 0) {
@@ -100,7 +100,7 @@ void KeyHammer::check_note_on () {
     velocityIndex = min(velocityIndex, velocityMapLength);
     MIDI.sendNoteOn(pitch, velocityMap[velocityIndex], 2);
     noteOn = true;
-    if (printMode == 'i'){ //&& ((i == 0 && j == 0) || (i == 1 && j == 2))){
+    if (printNotes){ //&& ((i == 0 && j == 0) || (i == 1 && j == 2))){
       Serial.printf("\n note on: hammerSpeed %f, velocityIndex %d, velocity %d pitch %d \n", velocity, velocityIndex, velocityMap[velocityIndex], pitch);
     }
     hammerPosition = noteOnThreshold;
@@ -112,7 +112,7 @@ void KeyHammer::check_note_off () {
   if (noteOn){
     if ((keyPosition > noteOffThreshold) == (sensorFullyOff > sensorFullyOn)) {
       MIDI.sendNoteOff(pitch, 64, 2);
-      if (printMode == 'i'){
+      if (printNotes){
         Serial.printf("note off: noteOffThreshold %d, adcValue %d, velocity %d  pitch %d \n", noteOffThreshold, keyPosition, 64, pitch);
       }
       noteOn = false;
@@ -127,18 +127,6 @@ void KeyHammer::step_hammer () {
   // test();
   check_note_on();
   check_note_off();
-  // print some stuff
-  if (printMode == 'p'){
-    // Serial.printf("%d %f %f ", keyPosition, hammerPosition, hammerSpeed);
-    Serial.printf("hammer_%d:%f,", pitch, hammerPosition);
-    // Serial.printf("keySpeed_%d:%f,", pitch, keySpeed * 10000);
-    // Serial.printf("hammerSpeed_%d:%f,", pitch, hammerSpeed * 10000);
-    Serial.printf("rawADC_%d:%d,", pitch, rawADC);
-    Serial.printf("elapsed_%d:%d,", pitch, (int)elapsed);
-    // Serial.printf("pin_%d:%d,", pitch, pin);
-    // this newline may need to go after all keys have printed? I'm unsure how the serial plotter works.
-    // Serial.print('\n');
-  }
   elapsed = 0;
 }
 
@@ -161,13 +149,6 @@ void KeyHammer::step_pedal () {
     // 71 = Resonance (filter)
     // 74 = Frequency Cutoff (filter)
     MIDI.sendControlChange(	controlNumber, controlValue, 2);
-  }
-  // print some stuff
-  if (printMode == 'p'){
-    Serial.printf("key_%d:%f,", pitch, keyPosition);
-    Serial.printf("rawADC_%d:%d,", pitch, rawADC);
-    Serial.printf("elapsed_%d:%d,", pitch, (int)elapsed);
-    Serial.printf("controlValue_%d:%d,", controlValue, (int)elapsed);
   }
   elapsed = 0;
 }
@@ -200,3 +181,17 @@ void KeyHammer::generateVelocityMap () {
   }
 }
 
+void KeyHammer::printState () {
+  if (operationMode=='p'){
+    Serial.printf("key_%d:%f,", pitch, keyPosition);
+    Serial.printf("rawADC_%d:%d,", pitch, rawADC);
+    Serial.printf("elapsed_%d:%d,", pitch, (int)elapsed);
+    Serial.printf("controlValue_%d:%d,", controlValue, (int)elapsed);
+  } else if (operationMode=='h'){
+    // Serial.printf("%d %f %f ", keyPosition, keySpeed, hammerSpeed);
+    Serial.printf("hammer_%d:%f,", pitch, hammerPosition);
+    Serial.printf("rawADC_%d:%d,", pitch, rawADC);
+    Serial.printf("elapsed_%d:%d,", pitch, (int)elapsed);
+  }
+
+}

@@ -69,6 +69,12 @@ class KeyHammer
     // operation mode switches between operation as a hammer simulation key, a key, or a pedal
     char operationMode;
     int getAdcValue(void);
+    // generateVelocityMap is used to fill values in for a blank velocity map.
+    // In future, the plan is to keep a ref to a velocity map as a class member. generateVelocityMap
+    // would then take in a parameter to determine the base of the logarithm used for stretching,
+    // and probably also assign the new velocity map to the ref (or return, and use a setter fn).
+    // A getter fn would also exist for obtaining a newly generated velocity map from a 
+    // KeyHammer object and apply it to another.
     void generateVelocityMap();
     int controlNumber;
     void printState();

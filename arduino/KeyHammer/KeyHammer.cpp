@@ -21,8 +21,8 @@ int velocityMap[velocityMapLength];
 double hammerSpeedScaler = velocityMapLength / maxHammerSpeed;
 
 // use a constructor initializer list for adc, otherwise the reference won't work
-KeyHammer::KeyHammer (int(*adcFnPtr)(void), int pin, int pitch, char operationMode='h', int sensorFullyOn=430, int sensorFullyOff=50)
-  : adcFnPtr(adcFnPtr), pin(pin), pitch(pitch), operationMode(operationMode), sensorFullyOn(sensorFullyOn), sensorFullyOff(sensorFullyOff) {
+KeyHammer::KeyHammer (int(*adcFnPtr)(void), int pitch, char operationMode='h', int sensorFullyOn=430, int sensorFullyOff=50, double hammer_travel=4.5)
+  : adcFnPtr(adcFnPtr), pitch(pitch), operationMode(operationMode), sensorFullyOn(sensorFullyOn), sensorFullyOff(sensorFullyOff), hammer_travel(hammer_travel) {
 
   sensorMax = max(sensorFullyOn, sensorFullyOff);
   sensorMin = min(sensorFullyOn, sensorFullyOff);
@@ -33,7 +33,6 @@ KeyHammer::KeyHammer (int(*adcFnPtr)(void), int pin, int pitch, char operationMo
   // gravity for hammer, measured in adc bits per microsecond per microsecond
   // if the key press is ADC_range, where ADC_range is abs(sensorFullyOn - sensorFullyOff)
   // hammer travel in mm; used to calculate gravity in adc bits
-  hammer_travel = 0.2;
   gravity = (sensorFullyOn - sensorFullyOff) / (hammer_travel * (double)9810000000);
 
   keyPosition = sensorFullyOff;

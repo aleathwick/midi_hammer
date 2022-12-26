@@ -19,9 +19,9 @@
 
 // ADCs
 // MCP3208 adcs[2];
-Adafruit_MCP3008 adcs[2];
-int adcCount = 2;
-int adcSelects[] = { 22, 17 };
+Adafruit_MCP3008 adcs[3];
+int adcCount = 3;
+int adcSelects[] = { 26, 22, 17 };
 
 // USB MIDI object
 Adafruit_USBD_MIDI usb_midi;
@@ -60,37 +60,33 @@ int testFunction() {
 }
 
 
-const int n_keys = 1;
-// KeyHammer keys[] = { { adcs[0], 4, 60 },
-//                        { adcs[0], 3, 61 },
-//                        { adcs[0], 2, 62 },
-//                        { adcs[0], 1, 63 },
-//                        { adcs[0], 0, 64 },
-//                        { adcs[1], 7, 65 },
-//                        { adcs[1], 6, 66 },
-//                        { adcs[1], 5, 67 },
-//                        { adcs[1], 4, 68 },
-//                        { adcs[1], 3, 69 },
-//                        { adcs[1], 2, 70 },
-//                        { adcs[1], 1, 71 },
-//                        { adcs[1], 0, 72 }};
+const int n_keys = 24;
 
-KeyHammer keys[] = { { []() -> int { return analogRead(28); }, 7, 36, 'p', 1010, 0 },
-                    { []() -> int { return analogRead(27); }, 7, 36, 'p', 1010, 0 },
-                    { []() -> int { return analogRead(26); }, 7, 36, 'p', 1010, 0 },
+KeyHammer keys[] = { { []() -> int { return adcs[0].readADC(7); }, 48, 'h', 430, 50, 4.5 },
+                    { []() -> int { return adcs[0].readADC(6); }, 49, 'h', 430, 50 , 4.5},
+                    { []() -> int { return adcs[0].readADC(5); }, 50, 'h', 430, 50 , 4.5},
+                    { []() -> int { return adcs[0].readADC(4); }, 51, 'h', 430, 50 , 4.5},
+                    { []() -> int { return adcs[0].readADC(3); }, 52, 'h', 430, 50 , 4.5},
+                    { []() -> int { return adcs[0].readADC(2); }, 53, 'h', 430, 50 , 4.5},
+                    { []() -> int { return adcs[0].readADC(1); }, 54, 'h', 430, 50 , 4.5},
+                    { []() -> int { return adcs[0].readADC(0); }, 55, 'h', 430, 50 , 4.5},
+                    { []() -> int { return adcs[1].readADC(7); }, 56, 'h', 430, 50 , 4.5},
+                    { []() -> int { return adcs[1].readADC(6); }, 57, 'h', 430, 50 , 4.5},
+                    { []() -> int { return adcs[1].readADC(5); }, 58, 'h', 430, 50 , 4.5},
+                    { []() -> int { return adcs[1].readADC(4); }, 59, 'h', 430, 50 , 4.5},
+                    { []() -> int { return adcs[1].readADC(3); }, 60, 'h', 430, 50 , 4.5},
+                    { []() -> int { return adcs[1].readADC(2); }, 61, 'h', 430, 50 , 4.5},
+                    { []() -> int { return adcs[1].readADC(1); }, 62, 'h', 430, 50 , 4.5},
+                    { []() -> int { return adcs[1].readADC(0); }, 63, 'h', 430, 50 , 4.5},
+                    { []() -> int { return adcs[2].readADC(7); }, 64, 'h', 430, 50 , 4.5},
+                    { []() -> int { return adcs[2].readADC(6); }, 65, 'h', 430, 50 , 4.5},
+                    { []() -> int { return adcs[2].readADC(5); }, 66, 'h', 430, 50 , 4.5},
+                    { []() -> int { return adcs[2].readADC(4); }, 67, 'h', 430, 50 , 4.5},
+                    { []() -> int { return adcs[2].readADC(3); }, 68, 'h', 430, 50 , 4.5},
+                    { []() -> int { return adcs[2].readADC(2); }, 69, 'h', 430, 50 , 4.5},
+                    { []() -> int { return adcs[2].readADC(1); }, 70, 'h', 430, 50 , 4.5},
+                    { []() -> int { return adcs[2].readADC(0); }, 71, 'h', 430, 50 , 4.5}
                   };
-
-void change_mode () {
-  // Serial.print("Interrupt ");
-  // Serial.print(y++);
-  // Serial.println();
-  if (digitalRead(15) == 1) {
-    keys[0].operationMode = 'h';
-  } else {
-    keys[0].operationMode = 'p';
-  }
-}
-
 
 void setup() {
   Serial.begin(57600);

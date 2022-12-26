@@ -27,7 +27,6 @@ class KeyHammer
     int sensorMin;
     int sensorMax;
 
-    int pin;
     int pitch;
     
     int rawADC;
@@ -64,7 +63,7 @@ class KeyHammer
     void step_pedal();
 
   public:
-    KeyHammer(int(*adcFnPtr)(void), int pin, int pitch, char operationMode, int sensorFullyOn, int sensorFullyOff);
+    KeyHammer(int(*adcFnPtr)(void), int pitch, char operationMode, int sensorFullyOn, int sensorFullyOff, double hammer_travel);
     void step();
     // operation mode switches between operation as a hammer simulation key, a key, or a pedal
     char operationMode;

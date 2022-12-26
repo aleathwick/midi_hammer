@@ -6,6 +6,8 @@
 #include <elapsedMillis.h>
 #include "MIDI.h"
 #include <Adafruit_TinyUSB.h>
+// the issue of defining the MIDI interface in a header file is raised here:
+// https://github.com/FortySevenEffects/arduino_midi_library/issues/165
 // Define the MIDI interface
 extern MIDI_NAMESPACE::MidiInterface<midi::SerialMIDI<Adafruit_USBD_MIDI>> MIDI; 
 

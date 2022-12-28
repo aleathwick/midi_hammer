@@ -46,13 +46,6 @@ const bool plotSerial = true;
 // used to restrict printing to only a few iterations after certain events
 elapsedMillis printTimer = 0;
 
-//////////////////////////////////////////////////////////////
-// https://cplusplus.com/doc/tutorial/classes/
-// https://paulmurraycbr.github.io/ArduinoTheOOWay.html
-// https://www.circuitbasics.com/programming-with-classes-and-objects-on-the-arduino/
-// #include <Adafruit_MCP3008.h>
-// #include <elapsedMillis.h>
-
 elapsedMillis testAdcTimer;
 int testFunction() {
   // test function for getting key position
@@ -108,13 +101,6 @@ void setup() {
   // This will also call usb_midi's begin()
   MIDI.begin(MIDI_CHANNEL_OMNI);
 
-  pinMode(15, INPUT_PULLUP);
-  // can then read this pin like so
-  // int sensorVal = digitalRead(28);
-
-  //interrupt for toggling mode 
-  attachInterrupt(digitalPinToInterrupt(15), change_mode, CHANGE);
-
   // wait until device mounted
   while (!USBDevice.mounted()) delay(1);
 }
@@ -125,7 +111,7 @@ void setup() {
 // }
 
 void loop() {
-  if (printTimer > 50) {
+  if (printTimer > 100) {
     printInfo = true;
   }
 

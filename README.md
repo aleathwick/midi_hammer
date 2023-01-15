@@ -1,12 +1,21 @@
 # midi_hammer
 Raspberry pico firmware for measuring piano key positions, using those measurements to simulate hammer movements, and sending resultant velocity information over usb midi.  
-### Circuit Python
-Working code for reading two sensors via mcp3008, and sending resultant velocities over usb midi.  
+See a demo here:  
+https://youtu.be/tgWXtYCHDI4
+
 ### Arduino
 Uses [Earle Philhower's Raspberry Pico Arduino core](https://github.com/earlephilhower/arduino-pico), using Adafruit TinyUSB for usb midi.  
 There is code for:
 - Reading sensors from multiple mcp3008 or mcp3208
-- Sending notes over usb midi
+- Sending notes over usb midi  
+
+The KeyHammer class encapsulates the logic required to run simulation. It can run in two modes: hammer or pedal. In hammer mode, a hammer is simulated in response to ADC values which are assumed to come from a key (or a foot pedal, for triggering drums). In pedal mode, values are read from ADC and directly turned into midi values, useful for controlling sustain pedal or other parameters.  
+The latest firmware for powering a digital piano sits in `arduino/multi_note_simulation`.  
+Pedal firmware sits in `arduino/pedal_unit`.  
+
+### Circuit Python
+This was the initial prototype. There is working code for reading two sensors via mcp3008, and sending resultant velocities over usb midi.  
+
 
 ## Notes to self
 ### Arduino plotting

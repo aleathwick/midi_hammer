@@ -9,20 +9,14 @@
 // set up map of velocities, mapping from hammer speed to midi value
 // hammer speed seems to range from ~0.005 to ~0.05 adc bits per microsecond
 // ~5 to ~50 adc bits per millisecond, ~5000 to ~50,000 adc bits per second
-// scale 
-
-// this and over will result in velocity of 127
-// 0.06 about right for piano, foot drum is more like 0.04
-const double maxHammerSpeed = 0.04; // adc bits per microsecond
 const int velocityMapLength = 1024;
 const double logBase = 5; // base used for log multiplier, with 1 setting the multiplier to always 1
 int velocityMap[velocityMapLength];
-// used to put hammer speed on an appropriate scale for indexing into velocityMap
-double hammerSpeedScaler = velocityMapLength / maxHammerSpeed;
+
 
 // use a constructor initializer list for adc, otherwise the reference won't work
-KeyHammer::KeyHammer (int(*adcFnPtr)(void), int pitch, char operationMode='h', int sensorFullyOn=430, int sensorFullyOff=50, double hammer_travel=4.5)
-  : adcFnPtr(adcFnPtr), pitch(pitch), operationMode(operationMode), sensorFullyOn(sensorFullyOn), sensorFullyOff(sensorFullyOff), hammer_travel(hammer_travel) {
+KeyHammer::KeyHammer (int(*adcFnPtr)(void), int pitch, char operationMode='h', int sensorFullyOn=430, int sensorFullyOff=50, double hammer_travel=4.5, double maxHammerSpeed=0.6)
+  : adcFnPtr(adcFnPtr), pitch(pitch), operationMode(operationMode), sensorFullyOn(sensorFullyOn), sensorFullyOff(sensorFullyOff), hammer_travel(hammer_travel), maxHammerSpeed(maxHammerSpeed) {
 
   sensorMax = max(sensorFullyOn, sensorFullyOff);
   sensorMin = min(sensorFullyOn, sensorFullyOff);
@@ -41,6 +35,8 @@ KeyHammer::KeyHammer (int(*adcFnPtr)(void), int pitch, char operationMode='h', i
   keySpeed = 0.0;
   hammerPosition = sensorFullyOff;
   hammerSpeed = 0.0;
+
+  hammerSpeedScaler = velocityMapLength / maxHammerSpeed;
 
   noteOn = false;
 
@@ -96,7 +92,7 @@ void KeyHammer::check_note_on () {
     // do something with hammer speed to get velocity
     velocity = hammerSpeed;
     velocityIndex = round(hammerSpeed * hammerSpeedScaler);
-    velocityIndex = min(velocityIndex, velocityMapLength);
+    velocityIndex = min(velocityIndex, velocityMapLength-1);
     MIDI.sendNoteOn(pitch, velocityMap[velocityIndex], 2);
     noteOn = true;
     if (printNotes){ //&& ((i == 0 && j == 0) || (i == 1 && j == 2))){

@@ -15,7 +15,7 @@ int velocityMap[velocityMapLength];
 
 
 // use a constructor initializer list for adc, otherwise the reference won't work
-KeyHammer::KeyHammer (int(*adcFnPtr)(void), int pitch, char operationMode='h', int sensorFullyOn=430, int sensorFullyOff=50, double hammer_travel=4.5, double maxHammerSpeed=0.6)
+KeyHammer::KeyHammer (int(*adcFnPtr)(void), int pitch, char operationMode='h', int sensorFullyOn=430, int sensorFullyOff=50, double hammer_travel=4.5, double maxHammerSpeed=0.06)
   : adcFnPtr(adcFnPtr), pitch(pitch), operationMode(operationMode), sensorFullyOn(sensorFullyOn), sensorFullyOff(sensorFullyOff), hammer_travel(hammer_travel), maxHammerSpeed(maxHammerSpeed) {
 
   sensorMax = max(sensorFullyOn, sensorFullyOff);

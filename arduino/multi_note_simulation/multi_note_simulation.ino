@@ -81,6 +81,27 @@ KeyHammer keys[] = { { []() -> int { return adcs[0].readADC(7); }, 48, 'h',390,5
                     { []() -> int { return adcs[2].readADC(0); }, 71, 'h', 390, 50 , 0.6, 0.04}
                   };
 
+int printkey = 0;
+void increment_printkey () {
+  // Serial.print("Interrupt ");
+  // Serial.print(y++);
+  // Serial.println();
+  delay(15);
+  if (digitalRead(1) == 0) {
+    printkey = (printkey + 1) % n_keys;
+  }
+}
+void decrement_printkey () {
+  // Serial.print("Interrupt ");
+  // Serial.print(y++);
+  // Serial.println();
+  delay(15);
+  if (digitalRead(2) == 0) {
+    printkey = (printkey - 1) % n_keys;
+  }
+}
+
+
 void setup() {
   Serial.begin(57600);
   // begin ADC
@@ -94,6 +115,10 @@ void setup() {
   }
 
   pinMode(LED_BUILTIN, OUTPUT);
+  pinMode(1, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(1), increment_printkey, CHANGE);
+  pinMode(2, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(2), decrement_printkey, CHANGE);
 
   usb_midi.setStringDescriptor("Laser Piano");
 
@@ -115,13 +140,13 @@ void loop() {
     printInfo = true;
   }
 
-  if (keys[0].elapsed >= 2500) {
+  if (keys[0].elapsed >= 1250) {
     for (int i = 0; i < n_keys; i++) {
-      keys[i].step();
-
-      if (printInfo) {
+      if (printInfo & i == printkey) {
         keys[i].printState();
       }
+      keys[i].step();
+
     }
 
     if (printInfo) {

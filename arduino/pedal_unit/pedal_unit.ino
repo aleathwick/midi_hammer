@@ -43,9 +43,10 @@ int testFunction() {
 
 const int n_keys = 3;
 
-KeyHammer keys[] = { { []() -> int { return analogRead(28); }, 36, 'p', 1010, 0, 0.2, 0.4},
-                    { []() -> int { return analogRead(27); }, 36, 'p', 1010, 0, 0.2, 0.4},
-                    { []() -> int { return analogRead(26); }, 36, 'p', 1010, 0, 0.2, 0.4},
+KeyHammer keys[] = { { []() -> int { return analogRead(28); }, 36, 'p', 1010, 0, 0.2, 8500},
+                    { []() -> int { return analogRead(27); }, 36, 'p', 1010, 0, 0.2, 8500},
+                    { []() -> int { return analogRead(26); }, 36, 'p', 1010, 0, 0.2, 8500},
+                  };
                   };
 
 void change_mode () {

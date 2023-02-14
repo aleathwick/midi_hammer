@@ -47,7 +47,7 @@ class KeyHammer
     // this and over will result in velocity of 127
     // 0.06 about right for piano, foot drum is more like 0.04
     // measured in adc bits per microsecond
-    double maxHammerSpeed;
+    int minPressUS;
     // used to put hammer speed on an appropriate scale for indexing into velocityMap
     double hammerSpeedScaler;
 
@@ -70,7 +70,7 @@ class KeyHammer
     void step_pedal();
 
   public:
-    KeyHammer(int(*adcFnPtr)(void), int pitch, char operationMode, int sensorFullyOn, int sensorFullyOff, double hammer_travel, double maxHammerSpeed);
+    KeyHammer(int(*adcFnPtr)(void), int pitch, char operationMode, int sensorFullyOn, int sensorFullyOff, double hammer_travel, int minPressUS);
     void step();
     // operation mode switches between operation as a hammer simulation key, a key, or a pedal
     char operationMode;

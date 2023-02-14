@@ -15,8 +15,8 @@ int velocityMap[velocityMapLength];
 
 
 // use a constructor initializer list for adc, otherwise the reference won't work
-KeyHammer::KeyHammer (int(*adcFnPtr)(void), int pitch, char operationMode='h', int sensorFullyOn=430, int sensorFullyOff=50, double hammer_travel=4.5, double maxHammerSpeed=0.06)
-  : adcFnPtr(adcFnPtr), pitch(pitch), operationMode(operationMode), sensorFullyOn(sensorFullyOn), sensorFullyOff(sensorFullyOff), hammer_travel(hammer_travel), maxHammerSpeed(maxHammerSpeed) {
+KeyHammer::KeyHammer (int(*adcFnPtr)(void), int pitch, char operationMode='h', int sensorFullyOn=430, int sensorFullyOff=50, double hammer_travel=4.5, int minPressUS=8500)
+  : adcFnPtr(adcFnPtr), pitch(pitch), operationMode(operationMode), sensorFullyOn(sensorFullyOn), sensorFullyOff(sensorFullyOff), hammer_travel(hammer_travel), minPressUS(minPressUS) {
 
   sensorMax = max(sensorFullyOn, sensorFullyOff);
   sensorMin = min(sensorFullyOn, sensorFullyOff);
@@ -35,7 +35,8 @@ KeyHammer::KeyHammer (int(*adcFnPtr)(void), int pitch, char operationMode='h', i
   keySpeed = 0.0;
   hammerPosition = sensorFullyOff;
   hammerSpeed = 0.0;
-
+  // max hammer speed measured in adc bits per microseconds
+  double maxHammerSpeed = (max(sensorFullyOn, sensorFullyOff) - min(sensorFullyOn, sensorFullyOff)) / (double)minPressUS;
   hammerSpeedScaler = velocityMapLength / maxHammerSpeed;
 
   noteOn = false;

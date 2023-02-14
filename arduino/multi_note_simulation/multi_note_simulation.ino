@@ -53,32 +53,43 @@ int testFunction() {
 }
 
 
-const int n_keys = 24;
+// const int n_keys = 24;
 
-KeyHammer keys[] = { { []() -> int { return adcs[0].readADC(7); }, 48, 'h',390,50, 0.6, 0.04},
-                    { []() -> int { return adcs[0].readADC(6); }, 49, 'h', 320, 50 , 0.6, 0.06},//allegro324
-                    { []() -> int { return adcs[0].readADC(5); }, 50, 'h', 390, 50 , 0.6, 0.04},
-                    { []() -> int { return adcs[0].readADC(4); }, 51, 'h', 390, 50 , 0.6, 0.04},
-                    { []() -> int { return adcs[0].readADC(3); }, 52, 'h', 390, 50 , 0.6, 0.04},
-                    { []() -> int { return adcs[0].readADC(2); }, 53, 'h', 390, 50 , 0.6, 0.04},
-                    { []() -> int { return adcs[0].readADC(1); }, 54, 'h', 390, 50 , 0.6, 0.04},
-                    { []() -> int { return adcs[0].readADC(0); }, 55, 'h', 390, 50 , 0.6, 0.04},
-                    { []() -> int { return adcs[1].readADC(7); }, 56, 'h', 390, 50 , 0.6, 0.04},
-                    { []() -> int { return adcs[1].readADC(6); }, 57, 'h', 390, 50 , 0.6, 0.04},
-                    { []() -> int { return adcs[1].readADC(5); }, 58, 'h', 390, 50 , 0.6, 0.04},
-                    { []() -> int { return adcs[1].readADC(4); }, 59, 'h', 320, 50 , 0.6, 0.06},//allegro324
-                    { []() -> int { return adcs[1].readADC(3); }, 60, 'h', 390, 50 , 0.6, 0.04},
-                    { []() -> int { return adcs[1].readADC(2); }, 61, 'h', 390, 50 , 0.6, 0.04},
-                    { []() -> int { return adcs[1].readADC(1); }, 62, 'h', 390, 50 , 0.6, 0.04},
-                    { []() -> int { return adcs[1].readADC(0); }, 63, 'h', 390, 50 , 0.6, 0.04},
-                    { []() -> int { return adcs[2].readADC(7); }, 64, 'h', 390, 50 , 0.6, 0.04},
-                    { []() -> int { return adcs[2].readADC(6); }, 65, 'h', 390, 50 , 0.6, 0.04},
-                    { []() -> int { return adcs[2].readADC(5); }, 66, 'h', 390, 50 , 0.6, 0.04},
-                    { []() -> int { return adcs[2].readADC(4); }, 67, 'h', 390, 50 , 0.6, 0.04},
-                    { []() -> int { return adcs[2].readADC(3); }, 68, 'h', 390, 50 , 0.6, 0.04},
-                    { []() -> int { return adcs[2].readADC(2); }, 69, 'h', 390, 50 , 0.6, 0.04},
-                    { []() -> int { return adcs[2].readADC(1); }, 70, 'h', 390, 50 , 0.6, 0.04},
-                    { []() -> int { return adcs[2].readADC(0); }, 71, 'h', 390, 50 , 0.6, 0.04}
+// KeyHammer keys[] = { { []() -> int { return adcs[0].readADC(7); }, 48, 'h',390,50, 0.6, 8500},
+//                     { []() -> int { return adcs[0].readADC(6); }, 49, 'h', 320, 50 , 0.6, 8500},//allegro324
+//                     { []() -> int { return adcs[0].readADC(5); }, 50, 'h', 390, 50 , 0.6, 8500},
+//                     { []() -> int { return adcs[0].readADC(4); }, 51, 'h', 390, 50 , 0.6, 8500},
+//                     { []() -> int { return adcs[0].readADC(3); }, 52, 'h', 390, 50 , 0.6, 8500},
+//                     { []() -> int { return adcs[0].readADC(2); }, 53, 'h', 390, 50 , 0.6, 8500},
+//                     { []() -> int { return adcs[0].readADC(1); }, 54, 'h', 390, 50 , 0.6, 8500},
+//                     { []() -> int { return adcs[0].readADC(0); }, 55, 'h', 390, 50 , 0.6, 8500},
+//                     { []() -> int { return adcs[1].readADC(7); }, 56, 'h', 390, 50 , 0.6, 8500},
+//                     { []() -> int { return adcs[1].readADC(6); }, 57, 'h', 390, 50 , 0.6, 8500},
+//                     { []() -> int { return adcs[1].readADC(5); }, 58, 'h', 390, 50 , 0.6, 8500},
+//                     { []() -> int { return adcs[1].readADC(4); }, 59, 'h', 320, 50 , 0.6, 8500},//allegro324
+//                     { []() -> int { return adcs[1].readADC(3); }, 60, 'h', 390, 50 , 0.6, 8500},
+//                     { []() -> int { return adcs[1].readADC(2); }, 61, 'h', 390, 50 , 0.6, 8500},
+//                     { []() -> int { return adcs[1].readADC(1); }, 62, 'h', 390, 50 , 0.6, 8500},
+//                     { []() -> int { return adcs[1].readADC(0); }, 63, 'h', 390, 50 , 0.6, 8500},
+//                     { []() -> int { return adcs[2].readADC(7); }, 64, 'h', 390, 50 , 0.6, 8500},
+//                     { []() -> int { return adcs[2].readADC(6); }, 65, 'h', 390, 50 , 0.6, 8500},
+//                     { []() -> int { return adcs[2].readADC(5); }, 66, 'h', 390, 50 , 0.6, 8500},
+//                     { []() -> int { return adcs[2].readADC(4); }, 67, 'h', 390, 50 , 0.6, 8500},
+//                     { []() -> int { return adcs[2].readADC(3); }, 68, 'h', 390, 50 , 0.6, 8500},
+//                     { []() -> int { return adcs[2].readADC(2); }, 69, 'h', 390, 50 , 0.6, 8500},
+//                     { []() -> int { return adcs[2].readADC(1); }, 70, 'h', 390, 50 , 0.6, 8500},
+//                     { []() -> int { return adcs[2].readADC(0); }, 71, 'h', 390, 50 , 0.6, 8500}
+//                   };
+
+const int n_keys = 7;
+
+KeyHammer keys[] = { { []() -> int { return adcs[2].readADC(0); }, 48, 'h',1000,50, 0.6, 8500},
+                    { []() -> int { return adcs[2].readADC(1); }, 49, 'h', 1000, 50 , 0.6, 8500},
+                    { []() -> int { return adcs[2].readADC(2); }, 50, 'h', 1000, 50 , 0.6, 8500},
+                    { []() -> int { return adcs[2].readADC(3); }, 51, 'h', 1000, 50 , 0.6, 8500},
+                    { []() -> int { return adcs[2].readADC(4); }, 52, 'h', 1000, 50 , 0.6, 8500},
+                    { []() -> int { return adcs[2].readADC(5); }, 53, 'h', 1000, 50 , 0.6, 8500},
+                    { []() -> int { return adcs[2].readADC(6); }, 54, 'h', 1000, 50 , 0.6, 8500}
                   };
 
 int printkey = 0;

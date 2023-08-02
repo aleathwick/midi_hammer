@@ -17,30 +17,34 @@ midi_channel = 1
 midi = adafruit_midi.MIDI(midi_out=usb_midi.ports[1], out_channel=midi_channel - 1)
 
 ### general simulation parameters
-GRAVITY = 6e-6
-ADC_BITS = 16
-# MAX_ADC_VALUE = 2 ** ADC_BITS
-MAX_ADC_VALUE = 26000
-MIN_ADC_VALUE = 13000
-NOTE_ON_THRESHHOLD = MAX_ADC_VALUE + 9600
+MAX_ADC_VALUE = 58000
+MIN_ADC_VALUE = 0
+NOTE_ON_THRESHHOLD = MAX_ADC_VALUE * 1.2
 NOTE_OFF_THRESHHOLD = int((MAX_ADC_VALUE - MIN_ADC_VALUE) / 2 + MIN_ADC_VALUE)
-NOTE_OFF_THRESHHOLD = 10000
+
+hammer_travel=1 # travel in mm of key
+min_press_US=8500 # fastest possible key press
+# gravity for hammer, measured in adc bits per microsecond per microsecond
+# if the key press is ADC_range, where ADC_range is abs(sensorFullyOn - sensorFullyOff)
+# hammer travel in mm; used to calculate gravity in adc bits
+GRAVITY = (MAX_ADC_VALUE - MIN_ADC_VALUE) / (hammer_travel * 9810000000)
 
 # max speed of hammer (after multiplying by SPEED_MULTIPLIER)
-MAX_SPEED = 15000
+MAX_SPEED = (MAX_ADC_VALUE -MIN_ADC_VALUE) / min_press_US
+velocity_map_length = 1024
 # multipler for speed of hammer (rounded multiplied value will be used to index into velocity lookup table)
-SPEED_MULTIPLIER = 1e7
+SPEED_MULTIPLIER = velocity_map_length / MAX_SPEED
 
 def log_speed(s, base=10):
     """apply log scaling to speed of hammer"""
     log_multiplier = math.log(s / MAX_SPEED * (base - 1) + 1, base)
     return round(s * log_multiplier)
 # final velocity map
-VELOCITIES = [max(round(i / log_speed(MAX_SPEED) * 127), 1) for i in range(MAX_SPEED)]
+VELOCITIES = [max(round(i / log_speed(velocity_map_length) * 127), 1) for i in range(velocity_map_length)]
 
 def get_velocity(x):
     x_scaled = round(x * SPEED_MULTIPLIER)
-    x_scaled_clipped = max(min(x_scaled, MAX_SPEED - 1), 0)
+    x_scaled_clipped = max(min(x_scaled, velocity_map_length - 1), 0)
     return VELOCITIES[x_scaled_clipped]
 
 class Key:
@@ -55,8 +59,8 @@ class Key:
         self.hammer_speed = 0
         
         # timestamps for calculating speeds
-        self.timestamp = time.monotonic_ns()
-        self.last_timestamp = time.monotonic_ns()
+        self.timestamp = time.monotonic_ns() // 1000
+        self.last_timestamp = time.monotonic_ns() // 1000
         self.elapsed = 0
 
         self.pitch = pitch
@@ -72,7 +76,8 @@ class Key:
 
     def _update_time(self):
         self.last_timestamp = self.timestamp
-        self.timestamp = time.monotonic_ns()
+        while self.timestamp == self.last_timestamp:
+            self.timestamp = time.monotonic_ns() // 1000
         self.elapsed = self.timestamp - self.last_timestamp
 
     def _update_key(self):

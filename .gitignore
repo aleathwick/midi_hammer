@@ -1,2 +1,3 @@
 *.uf2
 circuit_lib/
+circuitPython/lib/

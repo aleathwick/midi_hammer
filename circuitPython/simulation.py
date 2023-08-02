@@ -1,7 +1,7 @@
 import time
 import math
 import board
-from analogio import AnalogIn
+import analogio # for AnalogIn
 import usb_midi
 import adafruit_midi
 import adafruit_midi.note_on
@@ -45,13 +45,10 @@ def get_velocity(x):
 
 class Key:
     """Key object including all hammer simulation logic and midi triggering"""
-    def __init__(self, mcp, pin, pitch):
-        # mcp is an mcp300x object
-        self.mcp = mcp
-        # which adc channel this key corresponds to
-        self.pin = pin
+    def __init__(self, get_adc, pitch):
+        self.get_adc = get_adc
         # key position is simply the output of the adc
-        self.key_pos = self.mcp.read(self.pin) << 6
+        self.key_pos = self.get_adc()
         self.key_speed = 0
         # hammer position and speed are measured in the same units as key position and speed
         self.hammer_pos = 0.5
@@ -80,7 +77,7 @@ class Key:
 
     def _update_key(self):
         last_key_pos = self.key_pos
-        self.key_pos = self.mcp.read(self.pin) << 6
+        self.key_pos = self.get_adc()
         self.key_speed = (self.key_pos - last_key_pos) / self.elapsed
 
     def _update_hammer(self):
@@ -112,17 +109,26 @@ class Key:
 # this needs the following pins: busio.SPI(board.SCK0, board.MOSI0, board.MISO0)
 spi = busio.SPI(board.GP18, board.GP19, board.GP16)
 
-# SPI chip selects for ADCs 
-cs = [  
-        digitalio.DigitalInOut(board.GP17),
-        digitalio.DigitalInOut(board.GP22)
-    ]
+# # SPI chip selects for ADCs 
+# cs = [  
+#         digitalio.DigitalInOut(board.GP28),
+#         digitalio.DigitalInOut(board.GP27)
+#     ]
 
-adcs = [MCP.MCP3008(spi, p) for p in cs]
+# adcs = [MCP.MCP3008(spi, p) for p in cs]
+
+# def get_mcp_adc_fn(adc, mcp_pin):        
+#     return lambda : adc.read(mcp_pin) << 6
+# # e.g. get_mcp_adc_fn(adcs[0], MCP.P4)
+
+def get_builtin_adc_fn(board_adc):
+    adc = analogio.AnalogIn(board_adc)
+    return lambda : adc.value
+# e.g. get_builtin_adc_fn(board.A2)
 
 keys = [
-        Key(adcs[0], MCP.P4, 62)#,
-        # Key(AnalogIn(adcs[1], MCP.P1), 64)
+        Key(get_builtin_adc_fn(board.A2), 62),
+        Key(get_builtin_adc_fn(board.A1), 64)
     ]
 
 ## possible alternative approach: use adc_pin_groups and note_pitches to generate keys

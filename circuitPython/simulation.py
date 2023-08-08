@@ -28,7 +28,10 @@ min_press_US=8500 # fastest possible key press
 # gravity for hammer, measured in adc bits per microsecond per microsecond
 # if the key press is ADC_range, where ADC_range is abs(sensorFullyOn - sensorFullyOff)
 # hammer travel in mm; used to calculate gravity in adc bits
-GRAVITY = (MAX_ADC_VALUE - MIN_ADC_VALUE) / (hammer_travel * 9810000000)
+gravity_m = 9.81e-12 # metres per microsecond^2
+gravity_mm = gravity_m * 1000 # mm per microsecond^2
+# ADC bits per microsecond^2
+GRAVITY_ADC = gravity_mm  / hammer_travel * (MAX_ADC_VALUE - MIN_ADC_VALUE)
 
 # max speed of hammer (after multiplying by SPEED_MULTIPLIER)
 MAX_SPEED = (MAX_ADC_VALUE -MIN_ADC_VALUE) / min_press_US
@@ -88,8 +91,8 @@ class Key:
 
     def _update_hammer(self):
         # preliminary update
-        self.hammer_speed -= GRAVITY
         self.hammer_pos += round(self.hammer_speed * self.elapsed)
+        self.hammer_speed -= GRAVITY_ADC * self.elapsed
         # check for interaction with key
         if self.hammer_pos < self.key_pos:
             self.hammer_pos = self.key_pos

@@ -21,6 +21,7 @@ MAX_ADC_VALUE = 58000
 MIN_ADC_VALUE = 0
 NOTE_ON_THRESHHOLD = MAX_ADC_VALUE * 1.2
 NOTE_OFF_THRESHHOLD = int((MAX_ADC_VALUE - MIN_ADC_VALUE) / 2 + MIN_ADC_VALUE)
+MIN_LOOP_LEN = 2500 # us
 
 hammer_travel=1 # travel in mm of key
 min_press_US=8500 # fastest possible key press
@@ -58,7 +59,7 @@ class Key:
         self.hammer_pos = 0.5
         self.hammer_speed = 0
         
-        # timestamps for calculating speeds
+        # timestamps for calculating speeds, measured in us
         self.timestamp = time.monotonic_ns() // 1000
         self.last_timestamp = time.monotonic_ns() // 1000
         self.elapsed = 0
@@ -76,7 +77,7 @@ class Key:
 
     def _update_time(self):
         self.last_timestamp = self.timestamp
-        while self.timestamp == self.last_timestamp:
+        while (self.timestamp - self.last_timestamp) < MIN_LOOP_LEN:
             self.timestamp = time.monotonic_ns() // 1000
         self.elapsed = self.timestamp - self.last_timestamp
 

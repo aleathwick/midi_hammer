@@ -91,8 +91,9 @@ class Key:
 
     def _update_hammer(self):
         # preliminary update
-        self.hammer_pos += round(self.hammer_speed * self.elapsed)
+        original_speed = self.hammer_speed
         self.hammer_speed -= GRAVITY_ADC * self.elapsed
+        self.hammer_pos += (self.hammer_speed + original_speed) * self.elapsed / 2
         # check for interaction with key
         if self.hammer_pos < self.key_pos:
             self.hammer_pos = self.key_pos

@@ -72,6 +72,8 @@ void KeyHammer::update_keyspeed () {
 }
 
 void KeyHammer::update_hammer () {
+  // TODO: position should be updated using the mean of old and new speeds
+  // see circuitpy code
   hammerSpeed = hammerSpeed - gravity * elapsed;
   hammerPosition = hammerPosition + hammerSpeed * elapsed;
   // check for interaction with key

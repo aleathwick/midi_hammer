@@ -79,10 +79,10 @@ class Key:
         self._check_note_off()
 
     def _update_time(self):
-        self.last_timestamp = self.timestamp
-        while (self.timestamp - self.last_timestamp) < MIN_LOOP_LEN:
+        last_timestamp = self.timestamp
+        while (self.timestamp - last_timestamp) < MIN_LOOP_LEN:
             self.timestamp = time.monotonic_ns() // 1000
-        self.elapsed = self.timestamp - self.last_timestamp
+        self.elapsed = self.timestamp - last_timestamp
 
     def _update_key(self):
         last_key_pos = self.key_pos

@@ -27,7 +27,7 @@ KeyHammer::KeyHammer (int(*adcFnPtr)(void), int pitch, char operationMode='h', i
   // gravity for hammer, measured in adc bits per microsecond per microsecond
   // if the key press is ADC_range, where ADC_range is abs(sensorFullyOn - sensorFullyOff)
   // hammer travel in mm; used to calculate gravity in adc bits
-  gravity = (sensorFullyOn - sensorFullyOff) / (hammer_travel * (double)9810000000);
+  gravity = (double)9810000000 / hammer_travel * (sensorFullyOn - sensorFullyOff);
 
   keyPosition = sensorFullyOff;
   lastKeyPosition = sensorFullyOff;

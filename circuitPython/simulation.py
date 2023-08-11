@@ -41,7 +41,7 @@ SPEED_MULTIPLIER = velocity_map_length / MAX_SPEED
 
 def log_speed(s, base=10):
     """apply log scaling to speed of hammer"""
-    log_multiplier = math.log(s / MAX_SPEED * (base - 1) + 1, base)
+    log_multiplier = math.log(s / velocity_map_length * (base - 1) + 1, base)
     return round(s * log_multiplier)
 # final velocity map
 VELOCITIES = [max(round(i / log_speed(velocity_map_length) * 127), 1) for i in range(velocity_map_length)]

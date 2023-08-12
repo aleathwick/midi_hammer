@@ -6,6 +6,7 @@ import usb_midi
 import adafruit_midi
 import adafruit_midi.note_on
 import adafruit_midi.note_off
+import adafruit_midi.control_change
 # imports for spi with mcp3008
 import busio
 import digitalio
@@ -115,6 +116,32 @@ class Key:
                 midi.send(adafruit_midi.note_off.NoteOff(self.pitch, 54))
                 self.note_on = False
 
+class Expression(Key):
+    def __init__(self, get_adc, control_number):
+        super().__init__(get_adc, -1)
+        self.control_number = control_number
+        self.control_val = 0
+    def step(self):
+        'perform one step of simulation'
+        self._update_time()
+        self._update_key()
+        last_control_val = self.control_val
+        self.control_val = round(((self.key_pos - MIN_ADC_VALUE) / (MAX_ADC_VALUE - MIN_ADC_VALUE) * 127))
+        self.control_val = min(max(self.control_val, 0), 127)
+        if (self.control_val != last_control_val):
+            # control numbers:
+            # 1 = Modulation wheel
+            # 2 = Breath Control
+            # 7 = Volume
+            # 10 = Pan
+            # 11 = Expression
+            # 64 = Sustain Pedal (on/off)
+            # 65 = Portamento (on/off)
+            # 67 = Soft Pedal
+            # 71 = Resonance (filter)
+            # 74 = Frequency Cutoff (filter)
+            midi.send(adafruit_midi.control_change.ControlChange(self.control_number, self.control_val))
+
 # this needs the following pins: busio.SPI(board.SCK0, board.MOSI0, board.MISO0)
 spi = busio.SPI(board.GP18, board.GP19, board.GP16)
 
@@ -135,9 +162,10 @@ def get_builtin_adc_fn(board_adc):
     return lambda : adc.value
 # e.g. get_builtin_adc_fn(board.A2)
 
+
 keys = [
         Key(get_builtin_adc_fn(board.A2), 62),
-        Key(get_builtin_adc_fn(board.A1), 64)
+        Expression(get_builtin_adc_fn(board.A1), 64)
     ]
 
 ## possible alternative approach: use adc_pin_groups and note_pitches to generate keys

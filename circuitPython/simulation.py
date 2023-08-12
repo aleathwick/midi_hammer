@@ -64,7 +64,6 @@ class Key:
         
         # timestamps for calculating speeds, measured in us
         self.timestamp = time.monotonic_ns() // 1000
-        self.last_timestamp = time.monotonic_ns() // 1000
         self.elapsed = 0
 
         self.pitch = pitch

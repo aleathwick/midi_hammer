@@ -61,7 +61,7 @@ class Key:
         self.key_pos = self.get_adc()
         self.key_speed = 0
         # hammer position and speed are measured in the same units as key position and speed
-        self.hammer_pos = 0.5
+        self.hammer_pos = self.key_pos
         self.hammer_speed = 0
         
         # timestamps for calculating speeds, measured in us

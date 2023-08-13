@@ -1,6 +1,7 @@
 import time
 import math
 import board
+import random
 import analogio # for AnalogIn
 import usb_midi
 import adafruit_midi
@@ -162,6 +163,21 @@ def get_builtin_adc_fn(board_adc):
     return lambda : adc.value
 # e.g. get_builtin_adc_fn(board.A2)
 
+def get_test_sin_adc_fn(period = 1):
+    '''get function simulating adc values
+    
+    period: period of sin wave in seconds
+    '''
+    # timestamp in seconds, rounded to nearest us
+    start = time.monotonic_ns() // 1000 / 1e6
+    # ensure that if multiple sin functions of same period are used, they don't align
+    start += period * random.random()
+    # midpoint adc value
+    midpoint = MIN_ADC_VALUE + (MAX_ADC_VALUE - MIN_ADC_VALUE) / 2
+    def test_fn():
+        now = time.monotonic_ns() // 1000 / 1e6 * math.pi * 2 / period
+        return midpoint + math.sin(now) * (MAX_ADC_VALUE - MIN_ADC_VALUE) / 2
+    return test_fn
 
 keys = [
         Key(get_builtin_adc_fn(board.A2), 62),

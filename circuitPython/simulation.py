@@ -19,27 +19,9 @@ midi_channel = 1
 midi = adafruit_midi.MIDI(midi_out=usb_midi.ports[1], out_channel=midi_channel - 1)
 
 ### general simulation parameters
-MAX_ADC_VALUE = 58000
-MIN_ADC_VALUE = 0
-NOTE_ON_THRESHHOLD = MAX_ADC_VALUE * 1.2
-NOTE_OFF_THRESHHOLD = int((MAX_ADC_VALUE - MIN_ADC_VALUE) / 2 + MIN_ADC_VALUE)
 MIN_LOOP_LEN = 2500 # us
 
-hammer_travel=1 # travel in mm of key
-min_press_US=8500 # fastest possible key press
-# gravity for hammer, measured in adc bits per microsecond per microsecond
-# if the key press is ADC_range, where ADC_range is abs(sensorFullyOn - sensorFullyOff)
-# hammer travel in mm; used to calculate gravity in adc bits
-gravity_m = 9.81e-12 # metres per microsecond^2
-gravity_mm = gravity_m * 1000 # mm per microsecond^2
-# ADC bits per microsecond^2
-GRAVITY_ADC = gravity_mm  / hammer_travel * (MAX_ADC_VALUE - MIN_ADC_VALUE)
-
-# max speed of hammer (after multiplying by SPEED_MULTIPLIER)
-MAX_SPEED = (MAX_ADC_VALUE -MIN_ADC_VALUE) / min_press_US
 velocity_map_length = 1024
-# multipler for speed of hammer (rounded multiplied value will be used to index into velocity lookup table)
-SPEED_MULTIPLIER = velocity_map_length / MAX_SPEED
 
 def log_speed(s, base=10):
     """apply log scaling to speed of hammer"""
@@ -48,14 +30,9 @@ def log_speed(s, base=10):
 # final velocity map
 VELOCITIES = [max(round(i / log_speed(velocity_map_length) * 127), 1) for i in range(velocity_map_length)]
 
-def get_velocity(x):
-    x_scaled = round(x * SPEED_MULTIPLIER)
-    x_scaled_clipped = max(min(x_scaled, velocity_map_length - 1), 0)
-    return VELOCITIES[x_scaled_clipped]
-
 class Key:
     """Key object including all hammer simulation logic and midi triggering"""
-    def __init__(self, get_adc, pitch):
+    def __init__(self, get_adc, pitch, max_adc_val=64000, min_adc_val=0, hammer_travel=50, min_press_US=15000):
         self.get_adc = get_adc
         # key position is simply the output of the adc
         self.key_pos = self.get_adc()
@@ -63,6 +40,39 @@ class Key:
         # hammer position and speed are measured in the same units as key position and speed
         self.hammer_pos = self.key_pos
         self.hammer_speed = 0
+
+        # max and min adc values from bottom and top of key travel
+        self.max_adc_val = max_adc_val
+        self.min_adc_val = min_adc_val
+        
+        # on a piano, hammer travel is just under 2", say 5cm
+        # time from finger key contact to hammer hitting string:
+        # "...travel times ranged from 20 ms to around 200 ms..."
+        # see DOI 10.1121/1.1944648
+        # https://www.researchgate.net/publication/7603558_Touch_and_temporal_behavior_of_grand_piano_actions
+        self.hammer_travel=hammer_travel # travel in mm
+        self.min_press_US=min_press_US # fastest possible key press
+        # gravity for hammer, measured in adc bits per microsecond per microsecond
+        # if the key press is ADC_range, where ADC_range is abs(sensorFullyOn - sensorFullyOff)
+        # hammer travel in mm; used to calculate gravity in adc bits
+        gravity_m = 9.81e-12 # metres per microsecond^2
+        gravity_mm = gravity_m * 1000 # mm per microsecond^2
+        # ADC bits per microsecond^2
+        self.gravity = gravity_mm  / hammer_travel * (max_adc_val - min_adc_val)
+
+        # threshold for when a hammer should trigger note on
+        self.note_on_threshold = max_adc_val * 1.1
+        # threshold for when key should trigger a note off
+        self.note_off_threshold = int((max_adc_val - min_adc_val) / 2 + min_adc_val)
+
+        # max speed of hammer (after multiplying by SPEED_MULTIPLIER)
+        # in adc bits per us
+        hammer_max_speed = (max_adc_val -min_adc_val) / min_press_US
+        # multipler for speed of hammer
+        # to change hammer speed into velocity map scale
+        # i.e. the value returned from round(hammer_speed * hammer_speed_multipler)
+        # can be used to index into the velocity lookup table
+        self.hammer_speed_multiplier = velocity_map_length / hammer_max_speed
         
         # timestamps for calculating speeds, measured in us
         self.timestamp = time.monotonic_ns() // 1000
@@ -93,7 +103,7 @@ class Key:
     def _update_hammer(self):
         # preliminary update
         original_speed = self.hammer_speed
-        self.hammer_speed -= GRAVITY_ADC * self.elapsed
+        self.hammer_speed -= self.gravity * self.elapsed
         self.hammer_pos += (self.hammer_speed + original_speed) * self.elapsed / 2
         # check for interaction with key
         if self.hammer_pos < self.key_pos:
@@ -102,24 +112,29 @@ class Key:
                 self.hammer_speed = self.key_speed
 
     def _check_note_on(self):
-        if self.hammer_pos > NOTE_ON_THRESHHOLD:
-            velocity = get_velocity(self.hammer_speed)
+        if self.hammer_pos > self.note_on_threshold:
+            velocity = self._get_hammer_midi_velocity()
             # print('speed:', hammer_speed * 1000)
             # print(velocity)
             midi.send(adafruit_midi.note_on.NoteOn(self.pitch, velocity))
             self.note_on = True
-            self.hammer_pos = NOTE_ON_THRESHHOLD
+            self.hammer_pos = self.note_on_threshold
             self.hammer_speed = -self.hammer_speed
         
     def _check_note_off(self):
         if self.note_on:
-            if self.key_pos < NOTE_OFF_THRESHHOLD:
+            if self.key_pos < self.note_off_threshold:
                 midi.send(adafruit_midi.note_off.NoteOff(self.pitch, 54))
                 self.note_on = False
 
+    def _get_hammer_midi_velocity(self):
+        speed_scaled = round(self.hammer_speed * self.hammer_speed_multiplier)
+        speed_scaled_clipped = max(min(speed_scaled, velocity_map_length - 1), 0)
+        return VELOCITIES[speed_scaled_clipped]
+
 class Expression(Key):
-    def __init__(self, get_adc, control_number):
-        super().__init__(get_adc, -1)
+    def __init__(self, get_adc, control_number**kwargs):
+        super().__init__(get_adc, -1, **kwargs)
         self.control_number = control_number
         self.control_val = 0
     def step(self):
@@ -127,7 +142,7 @@ class Expression(Key):
         self._update_time()
         self._update_key()
         last_control_val = self.control_val
-        self.control_val = round(((self.key_pos - MIN_ADC_VALUE) / (MAX_ADC_VALUE - MIN_ADC_VALUE) * 127))
+        self.control_val = round(((self.key_pos - self.min_adc_val) / (self.max_adc_val - self.min_adc_val) * 127))
         self.control_val = min(max(self.control_val, 0), 127)
         if (self.control_val != last_control_val):
             # control numbers:
@@ -163,7 +178,7 @@ def get_builtin_adc_fn(board_adc):
     return lambda : adc.value
 # e.g. get_builtin_adc_fn(board.A2)
 
-def get_test_sin_adc_fn(period = 1):
+def get_test_sin_adc_fn(period = 1, min_adc_val=0, max_adc_val=64000):
     '''get function simulating adc values
     
     period: period of sin wave in seconds
@@ -173,10 +188,10 @@ def get_test_sin_adc_fn(period = 1):
     # ensure that if multiple sin functions of same period are used, they don't align
     start += period * random.random()
     # midpoint adc value
-    midpoint = MIN_ADC_VALUE + (MAX_ADC_VALUE - MIN_ADC_VALUE) / 2
+    midpoint = min_adc_val + (max_adc_val - min_adc_val) / 2
     def test_fn():
         now = time.monotonic_ns() // 1000 / 1e6 * math.pi * 2 / period
-        return midpoint + math.sin(now) * (MAX_ADC_VALUE - MIN_ADC_VALUE) / 2
+        return midpoint + math.sin(now) * (max_adc_val - min_adc_val) / 2
     return test_fn
 
 keys = [

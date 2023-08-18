@@ -131,6 +131,10 @@ class Key:
         speed_scaled = round(self.hammer_speed * self.hammer_speed_multiplier)
         speed_scaled_clipped = max(min(speed_scaled, velocity_map_length - 1), 0)
         return VELOCITIES[speed_scaled_clipped]
+    
+    def print_state(self):
+        print('key pos, elapsed, hammer pos, hammer speed')
+        print((self.key_pos, self.elapsed, self.hammer_pos, self.hammer_speed))
 
 class Expression(Key):
     def __init__(self, get_adc, control_number, **kwargs):
@@ -157,6 +161,10 @@ class Expression(Key):
             # 71 = Resonance (filter)
             # 74 = Frequency Cutoff (filter)
             midi.send(adafruit_midi.control_change.ControlChange(self.control_number, self.control_val))
+
+    def print_state(self):
+        print('key pos, elapsed, control val')
+        print((self.key_pos, self.elapsed, self.control_val))
 
 # this needs the following pins: busio.SPI(board.SCK0, board.MOSI0, board.MISO0)
 spi = busio.SPI(board.GP18, board.GP19, board.GP16)
@@ -218,9 +226,8 @@ print_i = 1
 print("READY")
 while True:
     for k in keys:
-        if print_i % 10 == 0:
-            print('key pos:', k.key_pos)
-            # print(k.hammer_pos)
+        if print_i % 50 == 0:
+            k.print_state()
         print_i += 1
         k.step()
 

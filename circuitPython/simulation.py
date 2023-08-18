@@ -145,11 +145,14 @@ class Key:
         print('key pos, elapsed, hammer pos, hammer speed')
         print((self.key_pos, self.elapsed, self.hammer_pos, self.hammer_speed))
 
-class Expression(Key):
-    def __init__(self, get_adc, control_number, **kwargs):
+class Pedal(Key):
+    def __init__(self, get_adc, control_number, binary=False, **kwargs):
         super().__init__(get_adc, -1, **kwargs)
         self.control_number = control_number
         self.control_val = 0
+        self.adc_mid_point = self.min_adc_val + (self.max_adc_val - self.min_adc_val) / 2
+        self.binary = binary
+        self.switch_on = False
     def step(self):
         'perform one step of simulation'
         self._update_time()
@@ -157,7 +160,7 @@ class Expression(Key):
         last_control_val = self.control_val
         self.control_val = round(((self.key_pos - self.min_adc_val) / (self.max_adc_val - self.min_adc_val) * 127))
         self.control_val = min(max(self.control_val, 0), 127)
-        if (self.control_val != last_control_val):
+        if not self.binary and (self.control_val != last_control_val):
             # control numbers:
             # 1 = Modulation wheel
             # 2 = Breath Control
@@ -170,6 +173,13 @@ class Expression(Key):
             # 71 = Resonance (filter)
             # 74 = Frequency Cutoff (filter)
             midi.send(adafruit_midi.control_change.ControlChange(self.control_number, self.control_val))
+        # if in binary mode, check that we are not near the midpoint
+        # this avoids changing too easily
+        elif abs(self.control_val - 64) < 62:
+            # check that the switch has changed position
+            if (self.control_val - 64 > 0) != self.switch_on:
+                self.switch_on = not self.switch_on
+                midi.send(adafruit_midi.control_change.ControlChange(self.control_number, self.switch_on * 127))
 
     def print_state(self):
         print('key pos, elapsed, control val')
@@ -213,7 +223,7 @@ def get_test_sin_adc_fn(period = 1, min_adc_val=0, max_adc_val=64000):
 
 keys = [
         Key(get_builtin_adc_fn(board.A2), 62),
-        Expression(get_builtin_adc_fn(board.A1), 64)
+        Pedal(get_builtin_adc_fn(board.A1), 64)
     ]
 
 ## possible alternative approach: use adc_pin_groups and note_pitches to generate keys

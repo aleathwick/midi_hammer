@@ -222,11 +222,6 @@ while True:
             print('key pos:', k.key_pos)
             # print(k.hammer_pos)
         print_i += 1
-        [i for i in range(88 * 2)]
-
-        # if i % 100 == 0:
-        #     print('hammer_pos:', k.hammer_pos)
-        #     print('key_speed:', k.key_speed)
         k.step()
 
        

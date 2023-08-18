@@ -33,6 +33,15 @@ VELOCITIES = [max(round(i / log_speed(velocity_map_length) * 127), 1) for i in r
 class Key:
     """Key object including all hammer simulation logic and midi triggering"""
     def __init__(self, get_adc, pitch, max_adc_val=64000, min_adc_val=0, hammer_travel=50, min_press_US=15000):
+        # if max and min adc values are the 'wrong way' around, then flip the sign on adc values
+        # this allows the simulation logic to all work the same, regardless of whether
+        # ADC is high or low when the key is depressed
+        if max_adc_val < min_adc_val:
+            max_adc_val = -max_adc_val
+            min_adc_val = -min_adc_val
+            get_adc_original = get_adc
+            get_adc = lambda: -get_adc_original()
+        
         self.get_adc = get_adc
         # key position is simply the output of the adc
         self.key_pos = self.get_adc()

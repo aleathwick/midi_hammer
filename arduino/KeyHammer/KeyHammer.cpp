@@ -17,7 +17,9 @@ int velocityMap[velocityMapLength];
 // use a constructor initializer list for adc, otherwise the reference won't work
 KeyHammer::KeyHammer (int(*adcFnPtr)(void), int pitch, char operationMode='h', int sensorFullyOn=430, int sensorFullyOff=50, double hammer_travel=4.5, int minPressUS=8500)
   : adcFnPtr(adcFnPtr), pitch(pitch), operationMode(operationMode), sensorFullyOn(sensorFullyOn), sensorFullyOff(sensorFullyOff), hammer_travel(hammer_travel), minPressUS(minPressUS) {
-
+  // TODO: there is a simpler way of doing this; see circuitpython code
+  // instead of modifying if statements all throughout code, flip the sign on max/min vals and
+  // on adc function
   sensorMax = max(sensorFullyOn, sensorFullyOff);
   sensorMin = min(sensorFullyOn, sensorFullyOff);
 

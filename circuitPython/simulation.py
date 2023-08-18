@@ -133,7 +133,7 @@ class Key:
         return VELOCITIES[speed_scaled_clipped]
 
 class Expression(Key):
-    def __init__(self, get_adc, control_number**kwargs):
+    def __init__(self, get_adc, control_number, **kwargs):
         super().__init__(get_adc, -1, **kwargs)
         self.control_number = control_number
         self.control_val = 0

@@ -17,7 +17,9 @@ int velocityMap[velocityMapLength];
 // use a constructor initializer list for adc, otherwise the reference won't work
 KeyHammer::KeyHammer (int(*adcFnPtr)(void), int pitch, char operationMode='h', int sensorFullyOn=430, int sensorFullyOff=50, double hammer_travel=4.5, int minPressUS=8500)
   : adcFnPtr(adcFnPtr), pitch(pitch), operationMode(operationMode), sensorFullyOn(sensorFullyOn), sensorFullyOff(sensorFullyOff), hammer_travel(hammer_travel), minPressUS(minPressUS) {
-
+  // TODO: there is a simpler way of doing this; see circuitpython code
+  // instead of modifying if statements all throughout code, flip the sign on max/min vals and
+  // on adc function
   sensorMax = max(sensorFullyOn, sensorFullyOff);
   sensorMin = min(sensorFullyOn, sensorFullyOff);
 
@@ -27,7 +29,7 @@ KeyHammer::KeyHammer (int(*adcFnPtr)(void), int pitch, char operationMode='h', i
   // gravity for hammer, measured in adc bits per microsecond per microsecond
   // if the key press is ADC_range, where ADC_range is abs(sensorFullyOn - sensorFullyOff)
   // hammer travel in mm; used to calculate gravity in adc bits
-  gravity = (sensorFullyOn - sensorFullyOff) / (hammer_travel * (double)9810000000);
+  gravity = (double)9810000000 / hammer_travel * (sensorFullyOn - sensorFullyOff);
 
   keyPosition = sensorFullyOff;
   lastKeyPosition = sensorFullyOff;
@@ -72,6 +74,8 @@ void KeyHammer::update_keyspeed () {
 }
 
 void KeyHammer::update_hammer () {
+  // TODO: position should be updated using the mean of old and new speeds
+  // see circuitpy code
   hammerSpeed = hammerSpeed - gravity * elapsed;
   hammerPosition = hammerPosition + hammerSpeed * elapsed;
   // check for interaction with key

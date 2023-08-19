@@ -22,7 +22,6 @@ This was the initial prototype. There is working code for reading two sensors vi
 See here for a good guide: https://diyrobocars.com/2020/05/04/arduino-serial-plotter-the-missing-manual/  
 
 ### to do
-- Test class for simulating ADC with random pauses between movements of key.
 - Add initial elapsed time for understanding how much spare time each loop there is.
 - Compare pico with ESP32 for speed.
 - Vectorize code for speed.

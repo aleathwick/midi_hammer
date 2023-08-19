@@ -221,6 +221,47 @@ def get_test_sin_adc_fn(period = 1, min_adc_val=0, max_adc_val=64000):
         return midpoint + math.sin(now) * (max_adc_val - min_adc_val) / 2
     return test_fn
 
+class Cat():
+    '''the cat plays the piano'''
+    def __init__(self, press_US=50000, release_US=500000, min_adc_val=0, max_adc_val=64000):
+        self.state = 'rest' # one of rest, depress, release
+        self.last_state = ''
+        self.key_pos = min_adc_val
+        self.speed_depress = (max_adc_val - min_adc_val) / press_US
+        self.speed_release = (max_adc_val - min_adc_val) / release_US
+        self.elapsed = 0
+        self.timestamp = time.monotonic_ns() // 1000
+        self.enter_rest_timestamp = self.timestamp
+        self.max_adc_val = max_adc_val
+        self.min_adc_val = min_adc_val
+        # time to wait until changing state from rest
+        self.wait_len = 1
+    def get_adc(self):
+        last_timestamp = self.timestamp
+        self.timestamp = time.monotonic_ns() // 1000
+        self.elapsed = self.timestamp - last_timestamp
+        if self.state == 'depress':
+            self.key_pos += self.elapsed * self.speed_depress
+            if self.key_pos > self.max_adc_val:
+                self.key_pos = self.max_adc_val
+                self.last_state = self.state
+                self.state = 'rest'
+                self.enter_rest_timestamp = self.timestamp
+        elif self.state == 'release':
+            self.key_pos -= self.elapsed * self.speed_release
+            if self.key_pos < self.min_adc_val:
+                    self.key_pos = self.min_adc_val
+                    self.last_state = self.state
+                    self.state = 'rest'
+                    self.enter_rest_timestamp = self.timestamp
+        elif self.state == 'rest':
+            if self.timestamp - self.enter_rest_timestamp > (self.wait_len * 1e6):
+                if self.last_state == 'depress':
+                    self.state = 'release'
+                else:
+                    self.state = 'depress'
+        return self.key_pos
+
 keys = [
         Key(get_builtin_adc_fn(board.A2), 62),
         Pedal(get_builtin_adc_fn(board.A1), 64)

@@ -188,7 +188,17 @@ class Pedal(Key):
 
 
 class Keys:
-    """Key object including all hammer simulation logic and midi triggering"""
+    """Keys object including all hammer simulation logic and midi triggering for multiple keys
+    
+    Like Key class, but vectorized; get_adc and pitches should be lists.
+
+    e.g.
+    keys = [
+    Keys([get_test_sin_adc_fn(period = 0.5) for _ in range(40, 80)],
+         [i for i in range(40, 80)])
+    ]
+
+    """
     def __init__(self, get_adc, pitches, max_adc_val=64000, min_adc_val=0, hammer_travel=50, min_press_US=15000):
         # if max and min adc values are the 'wrong way' around, then flip the sign on adc values
         # this allows the simulation logic to all work the same, regardless of whether

@@ -360,7 +360,10 @@ def get_test_sin_adc_fn(period = 1, min_adc_val=0, max_adc_val=64000):
     return test_fn
 
 class Cat():
-    '''the cat plays the piano'''
+    '''the cat plays the piano
+    
+    give Cat().get_adc to a key as the adc function
+    '''
     def __init__(self, press_US=50000, release_US=500000, min_adc_val=0, max_adc_val=64000):
         self.state = 'rest' # one of rest, depress, release
         self.last_state = ''

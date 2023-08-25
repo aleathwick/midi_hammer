@@ -324,7 +324,7 @@ class Keys:
         print((self.key_pos[0], self.elapsed, self.hammer_pos[0], self.hammer_speeds[0]))
 
 # this needs the following pins: busio.SPI(board.SCK0, board.MOSI0, board.MISO0)
-spi = busio.SPI(board.GP18, board.GP19, board.GP16)
+# spi = busio.SPI(board.GP18, board.GP19, board.GP16)
 
 # # SPI chip selects for ADCs 
 # cs = [  

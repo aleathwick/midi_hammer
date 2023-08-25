@@ -45,6 +45,12 @@ KeyHammer::KeyHammer (int(*adcFnPtr)(void), int pitch, char operationMode='h', i
 
   elapsed = 0;
 
+  // handle midi
+  // by default, do nothing
+  sendNoteOnFnPtr = [](int pitch, int velocity, int channel) -> void {  };
+  sendNoteOffFnPtr = [](int pitch, int velocity, int channel) -> void {  };
+  sendControlChangeFnPtr = [](int controlNumber, int controlValue, int channel) -> void { };
+
   lastControlValue = 0;
   controlValue = 0;
   // default to 64 (sustain); manually change if necessary
@@ -98,7 +104,7 @@ void KeyHammer::check_note_on () {
     velocity = hammerSpeed;
     velocityIndex = round(hammerSpeed * hammerSpeedScaler);
     velocityIndex = min(velocityIndex, velocityMapLength-1);
-    MIDI.sendNoteOn(pitch, velocityMap[velocityIndex], 2);
+    sendNoteOnFnPtr(pitch, velocityMap[velocityIndex], 2);
     noteOn = true;
     if (printNotes){ //&& ((i == 0 && j == 0) || (i == 1 && j == 2))){
       Serial.printf("\n note on: hammerSpeed %f, velocityIndex %d, velocity %d pitch %d \n", velocity, velocityIndex, velocityMap[velocityIndex], pitch);
@@ -111,7 +117,7 @@ void KeyHammer::check_note_on () {
 void KeyHammer::check_note_off () {
   if (noteOn){
     if ((keyPosition > noteOffThreshold) == (sensorFullyOff > sensorFullyOn)) {
-      MIDI.sendNoteOff(pitch, 64, 2);
+      sendNoteOffFnPtr(pitch, 64, 2);
       if (printNotes){
         Serial.printf("note off: noteOffThreshold %d, adcValue %d, velocity %d  pitch %d \n", noteOffThreshold, keyPosition, 64, pitch);
       }
@@ -148,7 +154,7 @@ void KeyHammer::step_pedal () {
     // 67 = Soft Pedal
     // 71 = Resonance (filter)
     // 74 = Frequency Cutoff (filter)
-    MIDI.sendControlChange(	controlNumber, controlValue, 2);
+    sendControlChangeFnPtr(	controlNumber, controlValue, 2);
   }
   elapsed = 0;
 }

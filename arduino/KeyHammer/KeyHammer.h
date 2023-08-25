@@ -4,18 +4,18 @@
 
 #pragma once
 #include <elapsedMillis.h>
-#include "MIDI.h"
-#include <Adafruit_TinyUSB.h>
-// the issue of defining the MIDI interface in a header file is raised here:
-// https://github.com/FortySevenEffects/arduino_midi_library/issues/165
-// Define the MIDI interface
-extern MIDI_NAMESPACE::MidiInterface<midi::SerialMIDI<Adafruit_USBD_MIDI>> MIDI; 
 
 class KeyHammer
 {
     // a pointer to a function that will return the position of the key
     // see here: https://forum.arduino.cc/t/function-as-a-parameter-in-class-object-function-pointer-in-library/461967/7
     int(*adcFnPtr)(void);
+    // pointers to functions for handling midi messages
+    // by default, won't do anything
+    // need to make a derived class to change behaviour
+    void(*sendNoteOnFnPtr)(int pitch, int velocity, int channel);
+    void(*sendNoteOffFnPtr)(int pitch, int velocity, int channel);
+    void(*sendControlChangeFnPtr)(int controlNumber, int controlValue, int channel);
     // define the range of the sensors, with sensorFullyOn being the key fully depressed
   // this will work regardless of sensorFullyOn < sensorFullyOff or sensorFullyOff < sensorFullyOn
     int sensorFullyOn;

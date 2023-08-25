@@ -33,15 +33,15 @@ class KeyHammer
     int keyPosition;
     int lastKeyPosition;
     // key and hammer speeds are measured in adc bits per microsecond
-    double keySpeed;
+    float keySpeed;
 
-    double hammerPosition;
-    double hammerSpeed;
-    double hammer_travel;
-    double gravity;
+    float hammerPosition;
+    float hammerSpeed;
+    float hammer_travel;
+    float gravity;
 
     bool noteOn;
-    double velocity;
+    float velocity;
     int velocityIndex;
 
     // this and over will result in velocity of 127
@@ -49,7 +49,7 @@ class KeyHammer
     // measured in adc bits per microsecond
     int minPressUS;
     // used to put hammer speed on an appropriate scale for indexing into velocityMap
-    double hammerSpeedScaler;
+    float hammerSpeedScaler;
 
     // parameters for pedal mode
     int lastControlValue;
@@ -70,7 +70,7 @@ class KeyHammer
     void step_pedal();
 
   public:
-    KeyHammer(int(*adcFnPtr)(void), int pitch, char operationMode, int sensorFullyOn, int sensorFullyOff, double hammer_travel, int minPressUS);
+    KeyHammer(int(*adcFnPtr)(void), int pitch, char operationMode, int sensorFullyOn, int sensorFullyOff, float hammer_travel, int minPressUS);
     void step();
     // operation mode switches between operation as a hammer simulation key, a key, or a pedal
     char operationMode;

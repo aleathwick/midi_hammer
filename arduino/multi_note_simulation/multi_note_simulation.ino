@@ -49,7 +49,7 @@ elapsedMillis printTimer = 0;
 elapsedMillis testAdcTimer;
 int testFunction() {
   // test function for getting key position
-  return (int)(sin(testAdcTimer / (double)300) * 512) + 512;
+  return (int)(sin(testAdcTimer / (float)300) * 512) + 512;
 }
 
 

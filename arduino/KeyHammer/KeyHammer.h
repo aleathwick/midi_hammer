@@ -13,6 +13,7 @@ class KeyHammer
     // pointers to functions for handling midi messages
     // by default, won't do anything
     // need to make a derived class to change behaviour
+    // see here: https://www.learncpp.com/cpp-tutorial/basic-inheritance-in-c/
     void(*sendNoteOnFnPtr)(int pitch, int velocity, int channel);
     void(*sendNoteOffFnPtr)(int pitch, int velocity, int channel);
     void(*sendControlChangeFnPtr)(int controlNumber, int controlValue, int channel);

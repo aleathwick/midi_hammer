@@ -1,3 +1,8 @@
 *.uf2
 circuit_lib/
 circuitPython/lib/
+*.bin
+*.elf
+*.map
+*.rpipco
+*.lnk

@@ -341,28 +341,27 @@ for p in enable_pins + address_pins:
 
 
 def update_states(target_address_states, enable_i):
-    on_pins = []
-    off_pins = []
     for target_state, pin in zip(target_address_states, address_pins):
         pin.value = target_state
     for i, pin in enumerate(enable_pins):
         pin.value = i==enable_i
 
-def get_adc_fn(on_pins, off_pins):
+def get_full_adc_fn(target_address_states, enable_i):
     """return adc fn that also updates logic pins for controlling c4051"""
-    def update_pins():
-        for pin in on_pins:
-            pin.value = False
-        for pin in off_pins:
-            pin.value = True
+    def read_adc():
+        time.sleep(0.0001)
+        update_states(target_address_states, enable_i)
         return signal_pin.value
-    return update_pins
+    return read_adc
 
-# states of address and active pins
-# these should be initialized
-address_states = [0,1,1]
-enabled_i = 1
-update_states([0,1,1], 1)
+# states of address and active pins for the last key
+# needs to be correct so that minimal adc functions are calculated correctly
+# i.e. how to change to the next sensor changing only those signal pins necessary
+end_address_states = [1,0,0]
+end_enabled_i = 1
+address_states = end_address_states.copy()
+enabled_i = end_enabled_i
+# update_states([1,0,0], 1)
 
 def get_minimal_adc_fn(target_address_states, enable_i):
     """given the target pin logic states, and enable number, create a minimal adc function
@@ -405,16 +404,28 @@ def get_minimal_adc_fn(target_address_states, enable_i):
 #     Pedal(lambda: mp.read_input(0), 64)
 # ]
 
+# or get_full_adc_fn instead, to explicitly set all pin values
 keys = [
     Key(get_minimal_adc_fn([0,0,0], 0), 64),
     Key(get_minimal_adc_fn([0,0,0], 1), 65),
-    Key(get_minimal_adc_fn([0,0,1], 0), 66),
-    Key(get_minimal_adc_fn([0,0,1], 1), 67),
     Key(get_minimal_adc_fn([0,1,0], 0), 68),
     Key(get_minimal_adc_fn([0,1,0], 1), 69),
-    Key(get_minimal_adc_fn([0,1,1], 0), 70),
-    Key(get_minimal_adc_fn([0,1,1], 1), 71)
+    Key(get_minimal_adc_fn([1,1,0], 0), 68),
+    Key(get_minimal_adc_fn([1,1,0], 1), 69),
+    Key(get_minimal_adc_fn([1,0,0], 0), 64),
+    Key(get_minimal_adc_fn([1,0,0], 1), 65),
 ]
+
+# keys = [
+#     Key(get_full_adc_fn([0,0,0], 0), 64),
+#     Key(get_full_adc_fn([0,0,0], 1), 65),
+#     Key(get_full_adc_fn([0,1,0], 0), 68),
+#     Key(get_full_adc_fn([0,1,0], 1), 69),
+#     Key(get_full_adc_fn([1,0,0], 0), 64),
+#     Key(get_full_adc_fn([1,0,0], 1), 65),
+#     Key(get_full_adc_fn([1,1,0], 0), 68),
+#     Key(get_full_adc_fn([1,1,0], 1), 69),
+# ]
 
 time.sleep(0.1)
 print_i = 1

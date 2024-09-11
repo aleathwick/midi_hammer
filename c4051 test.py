@@ -102,31 +102,33 @@ def get_minimal_adc_fn(target_address_states, enable_i):
 # ]
 
 # or get_full_adc_fn instead, to explicitly set all pin values
-max_adc_val=44500
-min_adc_val=37500
-hammer_travel=20
-min_press_US=5000
+key_params = {
+    'max_adc_val': 44500,
+    'min_adc_val': 37500,
+    'hammer_travel': 20,
+    'min_press_US': 5000
+}
 
 keys = [
-    Key(midi, get_minimal_adc_fn([0,0,0], 0), 64, max_adc_val=max_adc_val, min_adc_val=min_adc_val, hammer_travel=hammer_travel, min_press_US=min_press_US),
-    Key(midi, get_minimal_adc_fn([0,0,0], 1), 65, max_adc_val=max_adc_val, min_adc_val=min_adc_val, hammer_travel=hammer_travel, min_press_US=min_press_US),
-    Key(midi, get_minimal_adc_fn([0,1,0], 0), 68, max_adc_val=max_adc_val, min_adc_val=min_adc_val, hammer_travel=hammer_travel, min_press_US=min_press_US),
-    Key(midi, get_minimal_adc_fn([0,1,0], 1), 69, max_adc_val=max_adc_val, min_adc_val=min_adc_val, hammer_travel=hammer_travel, min_press_US=min_press_US),
-    Key(midi, get_minimal_adc_fn([1,1,0], 0), 68, max_adc_val=max_adc_val, min_adc_val=min_adc_val, hammer_travel=hammer_travel, min_press_US=min_press_US),
-    Key(midi, get_minimal_adc_fn([1,1,0], 1), 69, max_adc_val=max_adc_val, min_adc_val=min_adc_val, hammer_travel=hammer_travel, min_press_US=min_press_US),
-    Key(midi, get_minimal_adc_fn([1,0,0], 0), 64, max_adc_val=max_adc_val, min_adc_val=min_adc_val, hammer_travel=hammer_travel, min_press_US=min_press_US),
-    Key(midi, get_minimal_adc_fn([1,0,0], 1), 65, max_adc_val=max_adc_val, min_adc_val=min_adc_val, hammer_travel=hammer_travel, min_press_US=min_press_US)
+    Key(midi, get_minimal_adc_fn([0,0,0], 0), 64, **key_params),
+    Key(midi, get_minimal_adc_fn([0,0,0], 1), 65, **key_params),
+    Key(midi, get_minimal_adc_fn([0,1,0], 0), 68, **key_params),
+    Key(midi, get_minimal_adc_fn([0,1,0], 1), 69, **key_params),
+    Key(midi, get_minimal_adc_fn([1,1,0], 0), 68, **key_params),
+    Key(midi, get_minimal_adc_fn([1,1,0], 1), 69, **key_params),
+    Key(midi, get_minimal_adc_fn([1,0,0], 0), 64, **key_params),
+    Key(midi, get_minimal_adc_fn([1,0,0], 1), 65, **key_params)
 ]
 
 # keys = [
-#     Key(midi, get_full_adc_fn([0,0,0], 0), 64, max_adc_val=max_adc_val, min_adc_val=min_adc_val, hammer_travel=hammer_travel, min_press_US=min_press_US),
-#     Key(midi, get_full_adc_fn([0,0,0], 1), 65, max_adc_val=max_adc_val, min_adc_val=min_adc_val, hammer_travel=hammer_travel, min_press_US=min_press_US),
-#     Key(midi, get_full_adc_fn([0,1,0], 0), 68, max_adc_val=max_adc_val, min_adc_val=min_adc_val, hammer_travel=hammer_travel, min_press_US=min_press_US),
-#     Key(midi, get_full_adc_fn([0,1,0], 1), 69, max_adc_val=max_adc_val, min_adc_val=min_adc_val, hammer_travel=hammer_travel, min_press_US=min_press_US),
-#     Key(midi, get_full_adc_fn([1,0,0], 0), 64, max_adc_val=max_adc_val, min_adc_val=min_adc_val, hammer_travel=hammer_travel, min_press_US=min_press_US),
-#     Key(midi, get_full_adc_fn([1,0,0], 1), 65, max_adc_val=max_adc_val, min_adc_val=min_adc_val, hammer_travel=hammer_travel, min_press_US=min_press_US),
-#     Key(midi, get_full_adc_fn([1,1,0], 0), 68, max_adc_val=max_adc_val, min_adc_val=min_adc_val, hammer_travel=hammer_travel, min_press_US=min_press_US),
-#     Key(midi, get_full_adc_fn([1,1,0], 1), 69, max_adc_val=max_adc_val, min_adc_val=min_adc_val, hammer_travel=hammer_travel, min_press_US=min_press_US),
+#     Key(midi, get_full_adc_fn([0,0,0], 0), 64, **key_params),
+#     Key(midi, get_full_adc_fn([0,0,0], 1), 65, **key_params),
+#     Key(midi, get_full_adc_fn([0,1,0], 0), 68, **key_params),
+#     Key(midi, get_full_adc_fn([0,1,0], 1), 69, **key_params),
+#     Key(midi, get_full_adc_fn([1,0,0], 0), 64, **key_params),
+#     Key(midi, get_full_adc_fn([1,0,0], 1), 65, **key_params),
+#     Key(midi, get_full_adc_fn([1,1,0], 0), 68, **key_params),
+#     Key(midi, get_full_adc_fn([1,1,0], 1), 69, **key_params),
 # ]
 
 time.sleep(0.1)

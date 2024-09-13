@@ -57,11 +57,9 @@ class Key:
         gravity_mm = gravity_m * 1000 # mm per microsecond^2
         # ADC bits per microsecond^2
         self.gravity = gravity_mm  / hammer_travel * (max_adc_val - min_adc_val)
-
-        # threshold for when a hammer should trigger note on
-        self.note_on_threshold = max_adc_val * 1.1
-        # threshold for when key should trigger a note off
-        self.note_off_threshold = int((max_adc_val - min_adc_val) * 0.3 + min_adc_val)
+        self.max_adc_val=max_adc_val
+        self.min_adc_val=min_adc_val
+        self._update_thresholds()
 
         # max speed of hammer (after multiplying by SPEED_MULTIPLIER)
         # in adc bits per us
@@ -133,6 +131,13 @@ class Key:
         speed_scaled = round(self.hammer_speed * self.hammer_speed_multiplier)
         speed_scaled_clipped = max(min(speed_scaled, velocity_map_length - 1), 0)
         return VELOCITIES[speed_scaled_clipped]
+    
+    def _update_thresholds(self):
+        """based on updated max/min adc values, update thresholds (note on / off / reset key)"""
+        # threshold for when a hammer should trigger note on
+        self.note_on_threshold = self.max_adc_val * 1.1
+        # threshold for when key should trigger a note off
+        self.note_off_threshold = int((self.max_adc_val - self.min_adc_val) * 0.3 + self.min_adc_val)
 
     def print_state(self):
         # print('key pos, elapsed, hammer pos, hammer speed')
@@ -187,6 +192,8 @@ class Keys:
     """Keys object including all hammer simulation logic and midi triggering for multiple keys
     
     Like Key class, but vectorized; get_adc and pitches should be lists.
+    Really, min/max adc values etc. should be lists as well, so that vectors of positions can be compared
+    to vectors of thresholds.
 
     e.g.
     keys = [

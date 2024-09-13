@@ -1,6 +1,6 @@
 *.uf2
 circuit_lib/
-circuitPython/lib/
+circuitPython/adafruit/
 *.bin
 *.elf
 *.map

@@ -60,6 +60,8 @@ class Key:
         self.max_adc_val=max_adc_val
         self.min_adc_val=min_adc_val
         self._update_thresholds()
+        # hammer is only simulated when key is armed
+        self.key_armed = True
 
         # max speed of hammer (after multiplying by SPEED_MULTIPLIER)
         # in adc bits per us
@@ -83,8 +85,9 @@ class Key:
         'perform one step of simulation'
         self._update_time()
         self._update_key()
-        self._update_hammer()
-        self._check_note_on()
+        if self.key_armed:
+            self._update_hammer()
+            self._check_note_on()
         self._check_note_off()
 
     def _update_time(self):
@@ -118,11 +121,14 @@ class Key:
             # print(velocity)
             self.midi.send(adafruit_midi.note_on.NoteOn(self.pitch, velocity))
             self.note_on = True
-            self.hammer_pos = self.note_on_threshold
+            self.hammer_pos = self.key_reset_threshold
             self.hammer_speed = -self.hammer_speed
+            self.key_armed = False
 
     def _check_note_off(self):
         if self.note_on:
+            if (not self.key_armed) and self.key_pos < self.key_reset_threshold:
+                self.key_armed = True
             if self.key_pos < self.note_off_threshold:
                 self.midi.send(adafruit_midi.note_off.NoteOff(self.pitch, 54))
                 self.note_on = False
@@ -138,6 +144,8 @@ class Key:
         self.note_on_threshold = self.max_adc_val * 1.1
         # threshold for when key should trigger a note off
         self.note_off_threshold = int((self.max_adc_val - self.min_adc_val) * 0.3 + self.min_adc_val)
+        # threshold for when key/hammer should be armed again
+        self.key_reset_threshold = int((self.max_adc_val - self.min_adc_val) * 0.75 + self.min_adc_val)
 
     def print_state(self):
         # print('key pos, elapsed, hammer pos, hammer speed')

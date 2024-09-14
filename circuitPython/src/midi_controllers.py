@@ -141,7 +141,7 @@ class Key:
     def _update_thresholds(self):
         """based on updated max/min adc values, update thresholds (note on / off / reset key)"""
         # threshold for when a hammer should trigger note on
-        self.note_on_threshold = self.max_adc_val * 1.1
+        self.note_on_threshold = int((self.max_adc_val - self.min_adc_val) * 1.2 + self.min_adc_val)
         # threshold for when key should trigger a note off
         self.note_off_threshold = int((self.max_adc_val - self.min_adc_val) * 0.3 + self.min_adc_val)
         # threshold for when key/hammer should be armed again

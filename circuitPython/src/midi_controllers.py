@@ -22,26 +22,9 @@ class Key:
     """Key object including all hammer simulation logic and midi triggering"""
     def __init__(self, midi, get_adc, pitch, max_adc_val=64000, min_adc_val=0, hammer_travel=50, min_press_US=15000):
         self.midi = midi
-        # if max and min adc values are the 'wrong way' around, then flip the sign on adc values
-        # this allows the simulation logic to all work the same, regardless of whether
-        # ADC is high or low when the key is depressed
-        if max_adc_val < min_adc_val:
-            max_adc_val = -max_adc_val
-            min_adc_val = -min_adc_val
-            get_adc_original = get_adc
-            get_adc = lambda: -get_adc_original()
-        
-        self.get_adc = get_adc
-        # key position is simply the output of the adc
-        self.key_pos = self.get_adc()
-        self.key_speed = 0
-        # hammer position and speed are measured in the same units as key position and speed
-        self.hammer_pos = self.key_pos
-        self.hammer_speed = 0
-
-        # max and min adc values from bottom and top of key travel
-        self.max_adc_val = max_adc_val
-        self.min_adc_val = min_adc_val
+        # save the original adc fn
+        # but when using it we might multiply it by -1
+        self.get_adc_original = get_adc
 
         # on a piano, hammer travel is just under 2", say 5cm
         # time from finger key contact to hammer hitting string:
@@ -54,23 +37,21 @@ class Key:
         # if the key press is ADC_range, where ADC_range is abs(sensorFullyOn - sensorFullyOff)
         # hammer travel in mm; used to calculate gravity in adc bits
         gravity_m = 9.81e-12 # metres per microsecond^2
-        gravity_mm = gravity_m * 1000 # mm per microsecond^2
-        # ADC bits per microsecond^2
-        self.gravity = gravity_mm  / hammer_travel * (max_adc_val - min_adc_val)
-        self.max_adc_val=max_adc_val
-        self.min_adc_val=min_adc_val
+        self.gravity_mm = gravity_m * 1000 # mm per microsecond^2
+        
+        # update adc params based on adc min / max values provided
+        self._update_adc_params(min_adc_val, max_adc_val)
+        
+        # initial key position is simply the output of the adc
+        self.key_pos = self.get_adc()
+        self.key_speed = 0
+        # hammer position and speed are measured in the same units as key position and speed
+        self.hammer_pos = self.key_pos
+        self.hammer_speed = 0
+
         self._update_thresholds()
         # hammer is only simulated when key is armed
         self.key_armed = True
-
-        # max speed of hammer (after multiplying by SPEED_MULTIPLIER)
-        # in adc bits per us
-        hammer_max_speed = (max_adc_val -min_adc_val) / min_press_US
-        # multipler for speed of hammer
-        # to change hammer speed into velocity map scale
-        # i.e. the value returned from round(hammer_speed * hammer_speed_multipler)
-        # can be used to index into the velocity lookup table
-        self.hammer_speed_multiplier = velocity_map_length / hammer_max_speed
 
         # timestamps for calculating speeds, measured in us
         self.timestamp = time.monotonic_ns() // 1000
@@ -80,6 +61,35 @@ class Key:
 
         self.pitch = pitch
         self.note_on = False
+
+    def _update_adc_params(self, min_adc_val, max_adc_val):
+        """based on min/max adc values, update related parameters"""
+        # if max and min adc values are the 'wrong way' around, then flip the sign on adc values
+        # this allows the simulation logic to all work the same, regardless of whether
+        # ADC is high or low when the key is depressed
+        if max_adc_val < min_adc_val:
+            self.max_adc_val = -max_adc_val
+            self.min_adc_val = -min_adc_val
+            self.get_adc = lambda: -self.get_adc_original()
+        else:
+            self.max_adc_val = max_adc_val
+            self.min_adc_val = min_adc_val
+            self.get_adc = self.get_adc_original
+        
+        # max and min adc values from bottom and top of key travel
+        
+
+        # ADC bits per microsecond^2
+        self.gravity = self.gravity_mm  / self.hammer_travel * (self.max_adc_val - self.min_adc_val)
+
+        # max speed of hammer (after multiplying by SPEED_MULTIPLIER)
+        # in adc bits per us
+        hammer_max_speed = (self.max_adc_val -self.min_adc_val) / self.min_press_US
+        # multipler for speed of hammer
+        # to change hammer speed into velocity map scale
+        # i.e. the value returned from round(hammer_speed * hammer_speed_multipler)
+        # can be used to index into the velocity lookup table
+        self.hammer_speed_multiplier = velocity_map_length / hammer_max_speed
 
     def step(self):
         'perform one step of simulation'
@@ -159,9 +169,13 @@ class Pedal(Key):
         super().__init__(midi, get_adc, -1, **kwargs)
         self.control_number = control_number
         self.control_val = 0
-        self.adc_mid_point = self.min_adc_val + (self.max_adc_val - self.min_adc_val) / 2
         self.binary = binary
         self.switch_on = False
+    
+    def _update_adc_params(self, min_adc_val, max_adc_val):
+        super()._update_adc_params(min_adc_val, max_adc_val)
+        self.adc_mid_point = self.min_adc_val + (self.max_adc_val - self.min_adc_val) / 2
+
     def step(self):
         'perform one step of simulation'
         self._update_time()

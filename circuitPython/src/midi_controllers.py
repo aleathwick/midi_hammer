@@ -59,6 +59,10 @@ class Key:
         # initial elapsed time before any waiting
         self.initial_elapsed = 0
 
+        # by default not calibrating, and step function is _step_simulation
+        self.calibrating = False
+        self.step = self._step_simulation
+
         self.pitch = pitch
         self.note_on = False
 
@@ -93,7 +97,7 @@ class Key:
 
         self._update_thresholds()
 
-    def step(self):
+    def _step_simulation(self):
         'perform one step of simulation'
         self._update_time()
         self._update_key()
@@ -101,6 +105,83 @@ class Key:
             self._update_hammer()
             self._check_note_on()
         self._check_note_off()
+    
+    def toggle_calibration(self):
+        if not self.calibrating:
+            self._calib_start()
+            self.step = self._step_calib
+        else:
+            self._calib_end()
+            self.step = self._step_simulation
+
+        # toggle calibration flag
+        self.calibrating = not self.calibrating
+
+
+    def _calib_start(self):
+        # initialize calibration params
+        # adc sample reservoir
+        self._calib_reservoir_init()
+        self.c_mode = 'min'
+        # send some midi to indicate start?
+        self._update_time()
+        self.c_start = self.timestamp
+
+    def _calib_reservoir_init(self):
+        self.c_resevoir = []
+        self.c_sample_t = 0
+        self.c_sample_n = 100
+    
+    def _step_calib(self):
+        self._update_time()
+        self._update_key()
+        if self.c_mode == 'min':
+            self._calib_sample()
+            if self.timestamp > (self.c_start + 1e6):
+                self._calib_min_end()
+        else:
+            # check that key isn't up still - we only want to sample when it is down
+            if (
+                self.key_pos > (self.c_min_sample_med + 3 * self.c_min_sample_std)
+                or self.key_pos < (self.c_min_sample_med - 3 * self.c_min_sample_std)
+            ):
+                self._calib_sample()
+
+
+    def _calib_sample(self):
+        # see https://stackoverflow.com/questions/2612648/reservoir-sampling
+        if self.c_sample_t < self.c_sample_n:
+            self.c_resevoir.append(self.key_pos)
+        else:
+            m = random.randint(0, self.c_sample_t)
+            if m < self.c_sample_n:
+                self.c_resevoir[m] = self.key_pos
+
+    def _calib_min_end(self):
+        # new min threshold
+        self.c_min_sample_med = np.median(np.array(self.c_resevoir))
+        self.c_min_sample_max = max(self.c_resevoir)
+        self.c_min_sample_min = min(self.c_resevoir)
+        self.c_min_sample_range = max(self.c_resevoir) - min(self.c_resevoir)
+        self.c_min_sample_std = np.std(self.c_resevoir)
+
+        # change mode and reset reservoir
+        self.c_mode = 'max'
+        self._calib_reservoir_init()
+
+        # need to update min adc value, but there are a bunch of other things depending on it
+
+    def _calib_end(self):
+        # new max adc threshold
+        self.c_max_sample_med = np.median(np.array(self.c_resevoir))
+        self.c_max_sample_max = max(self.c_resevoir)
+        self.c_max_sample_min = min(self.c_resevoir)
+        self.c_max_sample_range = max(self.c_resevoir) - min(self.c_resevoir)
+        self.c_max_sample_std = np.std(self.c_resevoir)
+        # update adc related params
+        if abs(self.c_min_sample_med - self.c_max_sample_med) > (50 * self.c_min_sample_std):
+            self._update_adc_params(self.c_min_sample_med, self.c_max_sample_med)
+
 
     def _update_time(self):
         last_timestamp = self.timestamp

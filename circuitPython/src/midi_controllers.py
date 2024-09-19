@@ -1,5 +1,6 @@
 import time
 import math
+import random
 from ulab import numpy as np
 import adafruit_midi
 import adafruit_midi.note_on
@@ -49,7 +50,6 @@ class Key:
         self.hammer_pos = self.key_pos
         self.hammer_speed = 0
 
-        self._update_thresholds()
         # hammer is only simulated when key is armed
         self.key_armed = True
 
@@ -90,6 +90,8 @@ class Key:
         # i.e. the value returned from round(hammer_speed * hammer_speed_multipler)
         # can be used to index into the velocity lookup table
         self.hammer_speed_multiplier = velocity_map_length / hammer_max_speed
+
+        self._update_thresholds()
 
     def step(self):
         'perform one step of simulation'

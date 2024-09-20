@@ -156,6 +156,7 @@ class Key:
             m = random.randint(0, self.c_sample_t)
             if m < self.c_sample_n:
                 self.c_resevoir[m] = self.key_pos
+        self.c_sample_t +=1
 
     def _calib_min_end(self):
         # new min threshold

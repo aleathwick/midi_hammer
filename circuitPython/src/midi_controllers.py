@@ -123,6 +123,8 @@ class Key:
         # adc sample reservoir
         self._calib_reservoir_init()
         self.c_mode = 'min'
+        # reset the adc fn so it is raw adc value
+        self.get_adc = self.get_adc_original
         # send some midi to indicate start?
         self._update_time()
         self.c_start = self.timestamp
@@ -180,8 +182,14 @@ class Key:
         self.c_max_sample_range = max(self.c_resevoir) - min(self.c_resevoir)
         self.c_max_sample_std = np.std(self.c_resevoir)
         # update adc related params
+        # if the min and max values aren't sufficiently different, use the pre-calibration max value
+        # the key might not have been pressed
         if abs(self.c_min_sample_med - self.c_max_sample_med) > (50 * self.c_min_sample_std):
             self._update_adc_params(self.c_min_sample_med, self.c_max_sample_med)
+        
+        else:
+            # use absolute val, in case the adc signs have been flipped when last set
+            self._update_adc_params(self.c_min_sample_med, abs(self.max_adc_val))
 
 
     def _update_time(self):

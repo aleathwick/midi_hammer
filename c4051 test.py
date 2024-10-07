@@ -135,6 +135,14 @@ time.sleep(0.1)
 print_i = 1
 print("READY")
 # update_states([0,0,0], 0)
+
+calib_pin = digitalio.DigitalInOut(board.GP0)
+calib_pin.direction = digitalio.Direction.INPUT
+calib_pin.pull = digitalio.Pull.UP
+# interval is in seconds
+# update must be called with same value returned at least interval apart
+calib_switch = Debouncer(calib_pin, interval=0.05)
+
 while True:
     # print(signal_pin.value)
     # print([p.value for p in address_pins + enable_pins])
@@ -147,7 +155,17 @@ while True:
         k.step()
     print_i += 1
     if print_i % 10 == 0:
-        print(tuple(k.key_pos for k in keys))
+        print(tuple(k.key_pos for k in keys) + tuple(k.hammer_pos for k in keys))
+        # print(keys[0].elapsed)
+        # print((keys[6].key_pos, keys[6].hammer_pos))
+        # or just use calib_pin everywhere, and check how long since last calibration?
+        # would save a bit of overhead
+        # calib_switch.update()
+        calib_switch.update()
+        if calib_switch.fell:
+            for k in keys:
+                k.toggle_calibration()
+
         # if print_i % 240 == 0:
             # print([p.value for p in address_pins + enable_pins])
 

@@ -1,5 +1,6 @@
 import time
 import math
+import random
 from ulab import numpy as np
 import adafruit_midi
 import adafruit_midi.note_on
@@ -22,26 +23,9 @@ class Key:
     """Key object including all hammer simulation logic and midi triggering"""
     def __init__(self, midi, get_adc, pitch, max_adc_val=64000, min_adc_val=0, hammer_travel=50, min_press_US=15000):
         self.midi = midi
-        # if max and min adc values are the 'wrong way' around, then flip the sign on adc values
-        # this allows the simulation logic to all work the same, regardless of whether
-        # ADC is high or low when the key is depressed
-        if max_adc_val < min_adc_val:
-            max_adc_val = -max_adc_val
-            min_adc_val = -min_adc_val
-            get_adc_original = get_adc
-            get_adc = lambda: -get_adc_original()
-        
-        self.get_adc = get_adc
-        # key position is simply the output of the adc
-        self.key_pos = self.get_adc()
-        self.key_speed = 0
-        # hammer position and speed are measured in the same units as key position and speed
-        self.hammer_pos = self.key_pos
-        self.hammer_speed = 0
-
-        # max and min adc values from bottom and top of key travel
-        self.max_adc_val = max_adc_val
-        self.min_adc_val = min_adc_val
+        # save the original adc fn
+        # but when using it we might multiply it by -1
+        self.get_adc_original = get_adc
 
         # on a piano, hammer travel is just under 2", say 5cm
         # time from finger key contact to hammer hitting string:
@@ -54,23 +38,20 @@ class Key:
         # if the key press is ADC_range, where ADC_range is abs(sensorFullyOn - sensorFullyOff)
         # hammer travel in mm; used to calculate gravity in adc bits
         gravity_m = 9.81e-12 # metres per microsecond^2
-        gravity_mm = gravity_m * 1000 # mm per microsecond^2
-        # ADC bits per microsecond^2
-        self.gravity = gravity_mm  / hammer_travel * (max_adc_val - min_adc_val)
+        self.gravity_mm = gravity_m * 1000 # mm per microsecond^2
+        
+        # update adc params based on adc min / max values provided
+        self._update_adc_params(min_adc_val, max_adc_val)
+        
+        # initial key position is simply the output of the adc
+        self.key_pos = self.get_adc()
+        self.key_speed = 0
+        # hammer position and speed are measured in the same units as key position and speed
+        self.hammer_pos = self.key_pos
+        self.hammer_speed = 0
 
-        # threshold for when a hammer should trigger note on
-        self.note_on_threshold = max_adc_val * 1.1
-        # threshold for when key should trigger a note off
-        self.note_off_threshold = int((max_adc_val - min_adc_val) * 0.3 + min_adc_val)
-
-        # max speed of hammer (after multiplying by SPEED_MULTIPLIER)
-        # in adc bits per us
-        hammer_max_speed = (max_adc_val -min_adc_val) / min_press_US
-        # multipler for speed of hammer
-        # to change hammer speed into velocity map scale
-        # i.e. the value returned from round(hammer_speed * hammer_speed_multipler)
-        # can be used to index into the velocity lookup table
-        self.hammer_speed_multiplier = velocity_map_length / hammer_max_speed
+        # hammer is only simulated when key is armed
+        self.key_armed = True
 
         # timestamps for calculating speeds, measured in us
         self.timestamp = time.monotonic_ns() // 1000
@@ -78,16 +59,138 @@ class Key:
         # initial elapsed time before any waiting
         self.initial_elapsed = 0
 
+        # by default not calibrating, and step function is _step_simulation
+        self.calibrating = False
+        self.step = self._step_simulation
+
         self.pitch = pitch
         self.note_on = False
 
-    def step(self):
+    def _update_adc_params(self, min_adc_val, max_adc_val):
+        """based on min/max adc values, update related parameters"""
+        # if max and min adc values are the 'wrong way' around, then flip the sign on adc values
+        # this allows the simulation logic to all work the same, regardless of whether
+        # ADC is high or low when the key is depressed
+        if max_adc_val < min_adc_val:
+            self.max_adc_val = -max_adc_val
+            self.min_adc_val = -min_adc_val
+            self.get_adc = lambda: -self.get_adc_original()
+        else:
+            self.max_adc_val = max_adc_val
+            self.min_adc_val = min_adc_val
+            self.get_adc = self.get_adc_original
+        
+        # max and min adc values from bottom and top of key travel
+        
+
+        # ADC bits per microsecond^2
+        self.gravity = self.gravity_mm  / self.hammer_travel * (self.max_adc_val - self.min_adc_val)
+
+        # max speed of hammer (after multiplying by SPEED_MULTIPLIER)
+        # in adc bits per us
+        hammer_max_speed = (self.max_adc_val -self.min_adc_val) / self.min_press_US
+        # multipler for speed of hammer
+        # to change hammer speed into velocity map scale
+        # i.e. the value returned from round(hammer_speed * hammer_speed_multipler)
+        # can be used to index into the velocity lookup table
+        self.hammer_speed_multiplier = velocity_map_length / hammer_max_speed
+
+        self._update_thresholds()
+
+    def _step_simulation(self):
         'perform one step of simulation'
         self._update_time()
         self._update_key()
-        self._update_hammer()
-        self._check_note_on()
+        if self.key_armed:
+            self._update_hammer()
+            self._check_note_on()
         self._check_note_off()
+    
+    def toggle_calibration(self):
+        if not self.calibrating:
+            self._calib_start()
+            self.step = self._step_calib
+        else:
+            self._calib_end()
+            self.step = self._step_simulation
+
+        # toggle calibration flag
+        self.calibrating = not self.calibrating
+
+
+    def _calib_start(self):
+        # initialize calibration params
+        # adc sample reservoir
+        self._calib_reservoir_init()
+        self.c_mode = 'min'
+        # reset the adc fn so it is raw adc value
+        self.get_adc = self.get_adc_original
+        # send some midi to indicate start?
+        self._update_time()
+        self.c_start = self.timestamp
+
+    def _calib_reservoir_init(self):
+        self.c_resevoir = []
+        self.c_sample_t = 0
+        self.c_sample_n = 100
+    
+    def _step_calib(self):
+        self._update_time()
+        self._update_key()
+        if self.c_mode == 'min':
+            self._calib_sample()
+            if self.timestamp > (self.c_start + 1e6):
+                self._calib_min_end()
+        else:
+            # check that key isn't up still - we only want to sample when it is down
+            if (
+                self.key_pos > (self.c_min_sample_med + 3 * self.c_min_sample_std)
+                or self.key_pos < (self.c_min_sample_med - 3 * self.c_min_sample_std)
+            ):
+                self._calib_sample()
+
+
+    def _calib_sample(self):
+        # see https://stackoverflow.com/questions/2612648/reservoir-sampling
+        if self.c_sample_t < self.c_sample_n:
+            self.c_resevoir.append(self.key_pos)
+        else:
+            m = random.randint(0, self.c_sample_t)
+            if m < self.c_sample_n:
+                self.c_resevoir[m] = self.key_pos
+        self.c_sample_t +=1
+
+    def _calib_min_end(self):
+        # new min threshold
+        self.c_min_sample_med = np.median(np.array(self.c_resevoir))
+        self.c_min_sample_max = max(self.c_resevoir)
+        self.c_min_sample_min = min(self.c_resevoir)
+        self.c_min_sample_range = max(self.c_resevoir) - min(self.c_resevoir)
+        self.c_min_sample_std = np.std(self.c_resevoir)
+
+        # change mode and reset reservoir
+        self.c_mode = 'max'
+        self._calib_reservoir_init()
+
+        # need to update min adc value, but there are a bunch of other things depending on it
+
+    def _calib_end(self):
+        # new max adc threshold
+        self.c_max_sample_med = np.median(np.array(self.c_resevoir))
+        self.c_max_sample_max = max(self.c_resevoir)
+        self.c_max_sample_min = min(self.c_resevoir)
+        self.c_max_sample_range = max(self.c_resevoir) - min(self.c_resevoir)
+        self.c_max_sample_std = np.std(self.c_resevoir)
+        # update adc related params
+        # if the min and max values aren't sufficiently different, use the pre-calibration max value
+        # the key might not have been pressed
+        if abs(self.c_min_sample_med - self.c_max_sample_med) > (50 * self.c_min_sample_std):
+            self._update_adc_params(self.c_min_sample_med, self.c_max_sample_med)
+        
+        else:
+            # use absolute val, in case the adc signs have been flipped when last set
+            self._update_adc_params(self.c_min_sample_med, abs(self.max_adc_val))
+
 
     def _update_time(self):
         last_timestamp = self.timestamp
@@ -120,11 +223,14 @@ class Key:
             # print(velocity)
             self.midi.send(adafruit_midi.note_on.NoteOn(self.pitch, velocity))
             self.note_on = True
-            self.hammer_pos = self.note_on_threshold
+            self.hammer_pos = self.key_reset_threshold
             self.hammer_speed = -self.hammer_speed
+            self.key_armed = False
 
     def _check_note_off(self):
         if self.note_on:
+            if (not self.key_armed) and self.key_pos < self.key_reset_threshold:
+                self.key_armed = True
             if self.key_pos < self.note_off_threshold:
                 self.midi.send(adafruit_midi.note_off.NoteOff(self.pitch, 54))
                 self.note_on = False
@@ -133,6 +239,15 @@ class Key:
         speed_scaled = round(self.hammer_speed * self.hammer_speed_multiplier)
         speed_scaled_clipped = max(min(speed_scaled, velocity_map_length - 1), 0)
         return VELOCITIES[speed_scaled_clipped]
+    
+    def _update_thresholds(self):
+        """based on updated max/min adc values, update thresholds (note on / off / reset key)"""
+        # threshold for when a hammer should trigger note on
+        self.note_on_threshold = int((self.max_adc_val - self.min_adc_val) * 1.2 + self.min_adc_val)
+        # threshold for when key should trigger a note off
+        self.note_off_threshold = int((self.max_adc_val - self.min_adc_val) * 0.3 + self.min_adc_val)
+        # threshold for when key/hammer should be armed again
+        self.key_reset_threshold = int((self.max_adc_val - self.min_adc_val) * 0.75 + self.min_adc_val)
 
     def print_state(self):
         # print('key pos, elapsed, hammer pos, hammer speed')
@@ -146,9 +261,13 @@ class Pedal(Key):
         super().__init__(midi, get_adc, -1, **kwargs)
         self.control_number = control_number
         self.control_val = 0
-        self.adc_mid_point = self.min_adc_val + (self.max_adc_val - self.min_adc_val) / 2
         self.binary = binary
         self.switch_on = False
+    
+    def _update_adc_params(self, min_adc_val, max_adc_val):
+        super()._update_adc_params(min_adc_val, max_adc_val)
+        self.adc_mid_point = self.min_adc_val + (self.max_adc_val - self.min_adc_val) / 2
+
     def step(self):
         'perform one step of simulation'
         self._update_time()
@@ -187,6 +306,8 @@ class Keys:
     """Keys object including all hammer simulation logic and midi triggering for multiple keys
     
     Like Key class, but vectorized; get_adc and pitches should be lists.
+    Really, min/max adc values etc. should be lists as well, so that vectors of positions can be compared
+    to vectors of thresholds.
 
     e.g.
     keys = [

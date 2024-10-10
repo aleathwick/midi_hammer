@@ -1,8 +1,12 @@
+// choose the board type
+// either PICO, TEENSY
+// #define TEENSY
+#define PICO
+
 // works with raspberry pico, using Earle Philhower's Raspberry Pico Arduino core:
 // https://github.com/earlephilhower/arduino-pico
 // needs Adafruit TinyUSB for usb midi
 #include <Arduino.h>
-#include <Adafruit_TinyUSB.h>
 #include <Adafruit_MCP3008.h>
 // mcp3208 library: 
 #include <MCP3208.h>
@@ -15,6 +19,17 @@
 #include <math.h>
 #include "KeyHammer.h"
 
+// board specific imports and midi setup
+#ifdef RASPBERRY_PICO
+  #include <Adafruit_TinyUSB.h>
+
+  // USB MIDI object
+  Adafruit_USBD_MIDI usb_midi;
+
+  // Create a new instance of the Arduino MIDI Library,
+  // and attach usb_midi as the transport.
+  MIDI_CREATE_INSTANCE(Adafruit_USBD_MIDI, usb_midi, MIDI);
+ #endif
 
 
 // ADCs
@@ -22,16 +37,6 @@
 Adafruit_MCP3008 adcs[3];
 int adcCount = 3;
 int adcSelects[] = { 26, 22, 17 };
-
-// USB MIDI object
-Adafruit_USBD_MIDI usb_midi;
-
-// Create a new instance of the Arduino MIDI Library,
-// and attach usb_midi as the transport.
-MIDI_CREATE_INSTANCE(Adafruit_USBD_MIDI, usb_midi, MIDI);
-
-
-
 
 // can turn to int like so: int micros = elapsed[i][j];
 // and reset to zero: elapsed[i][j] = 0;
@@ -131,14 +136,16 @@ void setup() {
   pinMode(2, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(2), decrement_printkey, CHANGE);
 
-  usb_midi.setStringDescriptor("Laser Piano");
+  #ifdef RASPBERRY_PICO
+    usb_midi.setStringDescriptor("Laser Piano");
 
-  // Initialize MIDI, and listen to all MIDI channels
-  // This will also call usb_midi's begin()
-  MIDI.begin(MIDI_CHANNEL_OMNI);
+    // Initialize MIDI, and listen to all MIDI channels
+    // This will also call usb_midi's begin()
+    MIDI.begin(MIDI_CHANNEL_OMNI);
 
-  // wait until device mounted
-  while (!USBDevice.mounted()) delay(1);
+    // wait until device mounted
+    while (!USBDevice.mounted()) delay(1);
+  #endif
 }
 
 // can do setup on the other core too
@@ -167,7 +174,9 @@ void loop() {
     
     loopTimer = 0;
     // read any new MIDI messages
-    MIDI.read();
+    #ifdef RASPBERRY_PICO
+      MIDI.read();
+    #endif
   }
 }
   

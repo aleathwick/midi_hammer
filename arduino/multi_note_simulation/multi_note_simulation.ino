@@ -20,7 +20,7 @@
 #include "KeyHammer.h"
 
 // board specific imports and midi setup
-#ifdef RASPBERRY_PICO
+#ifdef PICO
   #include <Adafruit_TinyUSB.h>
 
   // USB MIDI object
@@ -136,7 +136,7 @@ void setup() {
   pinMode(2, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(2), decrement_printkey, CHANGE);
 
-  #ifdef RASPBERRY_PICO
+  #ifdef PICO
     usb_midi.setStringDescriptor("Laser Piano");
 
     // Initialize MIDI, and listen to all MIDI channels
@@ -174,7 +174,7 @@ void loop() {
     
     loopTimer = 0;
     // read any new MIDI messages
-    #ifdef RASPBERRY_PICO
+    #ifdef PICO
       MIDI.read();
     #endif
   }

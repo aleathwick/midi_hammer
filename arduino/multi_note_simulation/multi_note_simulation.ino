@@ -1,3 +1,15 @@
+/*
+To do:
+- Add midi fn pointers to KeyHammer
+- Basic adc read with teensy, based on cpy thresholds
+- Tidy up cpp/header files
+- Bring in other changes from cpy
+- Calibration code
+- Benchmark
+- SG filter
+
+*/
+
 // choose the board type
 // either PICO, TEENSY
 // #define TEENSY

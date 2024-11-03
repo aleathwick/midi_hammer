@@ -22,14 +22,14 @@ This was the initial prototype. There is working code for reading two sensors vi
 See here for a good guide: https://diyrobocars.com/2020/05/04/arduino-serial-plotter-the-missing-manual/  
 
 ### to do
-- Switch class, for on/off pedal from adc input.
-- Test class for simulating ADC with random pauses between movements of key.
-- Add initial elapsed time for understanding how much spare time each loop there is.
 - Compare pico with ESP32 for speed.
-- Vectorize code for speed.
+    - Still remains to do arduino on stm32.
 - Test simple averaging of multiple adc speeds to reduce hall sensor noise.
 - Calibration code
-- Add features to arduino code
+- Arduino code:
+    - Key class shouldn't interact directly with midi device (fn pointer instead?); that needs to be segmented out.
     - fix for behaviour of gravity (speed update should be based on mean of last and current speeds)
     - simplify handling of sensorFullyOn < sensorFullyOff (flip signs, as in circuitpy code)
+    - sub class for pedal mode, rather than one class with different modes?
+    - add binary version of pedal
 

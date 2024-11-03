@@ -4,18 +4,19 @@
 
 #pragma once
 #include <elapsedMillis.h>
-#include "MIDI.h"
-#include <Adafruit_TinyUSB.h>
-// the issue of defining the MIDI interface in a header file is raised here:
-// https://github.com/FortySevenEffects/arduino_midi_library/issues/165
-// Define the MIDI interface
-extern MIDI_NAMESPACE::MidiInterface<midi::SerialMIDI<Adafruit_USBD_MIDI>> MIDI; 
 
 class KeyHammer
 {
     // a pointer to a function that will return the position of the key
     // see here: https://forum.arduino.cc/t/function-as-a-parameter-in-class-object-function-pointer-in-library/461967/7
     int(*adcFnPtr)(void);
+    // pointers to functions for handling midi messages
+    // by default, won't do anything
+    // need to make a derived class to change behaviour
+    // see here: https://www.learncpp.com/cpp-tutorial/basic-inheritance-in-c/
+    void(*sendNoteOnFnPtr)(int pitch, int velocity, int channel);
+    void(*sendNoteOffFnPtr)(int pitch, int velocity, int channel);
+    void(*sendControlChangeFnPtr)(int controlNumber, int controlValue, int channel);
     // define the range of the sensors, with sensorFullyOn being the key fully depressed
   // this will work regardless of sensorFullyOn < sensorFullyOff or sensorFullyOff < sensorFullyOn
     int sensorFullyOn;
@@ -33,15 +34,15 @@ class KeyHammer
     int keyPosition;
     int lastKeyPosition;
     // key and hammer speeds are measured in adc bits per microsecond
-    double keySpeed;
+    float keySpeed;
 
-    double hammerPosition;
-    double hammerSpeed;
-    double hammer_travel;
-    double gravity;
+    float hammerPosition;
+    float hammerSpeed;
+    float hammer_travel;
+    float gravity;
 
     bool noteOn;
-    double velocity;
+    float velocity;
     int velocityIndex;
 
     // this and over will result in velocity of 127
@@ -49,7 +50,7 @@ class KeyHammer
     // measured in adc bits per microsecond
     int minPressUS;
     // used to put hammer speed on an appropriate scale for indexing into velocityMap
-    double hammerSpeedScaler;
+    float hammerSpeedScaler;
 
     // parameters for pedal mode
     int lastControlValue;
@@ -70,7 +71,7 @@ class KeyHammer
     void step_pedal();
 
   public:
-    KeyHammer(int(*adcFnPtr)(void), int pitch, char operationMode, int sensorFullyOn, int sensorFullyOff, double hammer_travel, int minPressUS);
+    KeyHammer(int(*adcFnPtr)(void), int pitch, char operationMode, int sensorFullyOn, int sensorFullyOff, float hammer_travel, int minPressUS);
     void step();
     // operation mode switches between operation as a hammer simulation key, a key, or a pedal
     char operationMode;

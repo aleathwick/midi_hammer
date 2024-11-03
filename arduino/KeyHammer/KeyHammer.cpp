@@ -10,12 +10,12 @@
 // hammer speed seems to range from ~0.005 to ~0.05 adc bits per microsecond
 // ~5 to ~50 adc bits per millisecond, ~5000 to ~50,000 adc bits per second
 const int velocityMapLength = 1024;
-const double logBase = 5; // base used for log multiplier, with 1 setting the multiplier to always 1
+const float logBase = 5; // base used for log multiplier, with 1 setting the multiplier to always 1
 int velocityMap[velocityMapLength];
 
 
 // use a constructor initializer list for adc, otherwise the reference won't work
-KeyHammer::KeyHammer (int(*adcFnPtr)(void), int pitch, char operationMode='h', int sensorFullyOn=430, int sensorFullyOff=50, double hammer_travel=4.5, int minPressUS=8500)
+KeyHammer::KeyHammer (int(*adcFnPtr)(void), int pitch, char operationMode='h', int sensorFullyOn=430, int sensorFullyOff=50, float hammer_travel=4.5, int minPressUS=8500)
   : adcFnPtr(adcFnPtr), pitch(pitch), operationMode(operationMode), sensorFullyOn(sensorFullyOn), sensorFullyOff(sensorFullyOff), hammer_travel(hammer_travel), minPressUS(minPressUS) {
   // TODO: there is a simpler way of doing this; see circuitpython code
   // instead of modifying if statements all throughout code, flip the sign on max/min vals and
@@ -29,7 +29,7 @@ KeyHammer::KeyHammer (int(*adcFnPtr)(void), int pitch, char operationMode='h', i
   // gravity for hammer, measured in adc bits per microsecond per microsecond
   // if the key press is ADC_range, where ADC_range is abs(sensorFullyOn - sensorFullyOff)
   // hammer travel in mm; used to calculate gravity in adc bits
-  gravity = (double)9810000000 / hammer_travel * (sensorFullyOn - sensorFullyOff);
+  gravity = (float)9810000000 / hammer_travel * (sensorFullyOn - sensorFullyOff);
 
   keyPosition = sensorFullyOff;
   lastKeyPosition = sensorFullyOff;
@@ -38,12 +38,18 @@ KeyHammer::KeyHammer (int(*adcFnPtr)(void), int pitch, char operationMode='h', i
   hammerPosition = sensorFullyOff;
   hammerSpeed = 0.0;
   // max hammer speed measured in adc bits per microseconds
-  double maxHammerSpeed = (max(sensorFullyOn, sensorFullyOff) - min(sensorFullyOn, sensorFullyOff)) / (double)minPressUS;
+  float maxHammerSpeed = (max(sensorFullyOn, sensorFullyOff) - min(sensorFullyOn, sensorFullyOff)) / (float)minPressUS;
   hammerSpeedScaler = velocityMapLength / maxHammerSpeed;
 
   noteOn = false;
 
   elapsed = 0;
+
+  // handle midi
+  // by default, do nothing
+  sendNoteOnFnPtr = [](int pitch, int velocity, int channel) -> void {  };
+  sendNoteOffFnPtr = [](int pitch, int velocity, int channel) -> void {  };
+  sendControlChangeFnPtr = [](int controlNumber, int controlValue, int channel) -> void { };
 
   lastControlValue = 0;
   controlValue = 0;
@@ -70,7 +76,7 @@ void KeyHammer::update_key () {
 }
 
 void KeyHammer::update_keyspeed () {
-  keySpeed = (keyPosition - lastKeyPosition) / (double)elapsed;
+  keySpeed = (keyPosition - lastKeyPosition) / (float)elapsed;
 }
 
 void KeyHammer::update_hammer () {
@@ -98,7 +104,7 @@ void KeyHammer::check_note_on () {
     velocity = hammerSpeed;
     velocityIndex = round(hammerSpeed * hammerSpeedScaler);
     velocityIndex = min(velocityIndex, velocityMapLength-1);
-    MIDI.sendNoteOn(pitch, velocityMap[velocityIndex], 2);
+    sendNoteOnFnPtr(pitch, velocityMap[velocityIndex], 2);
     noteOn = true;
     if (printNotes){ //&& ((i == 0 && j == 0) || (i == 1 && j == 2))){
       Serial.printf("\n note on: hammerSpeed %f, velocityIndex %d, velocity %d pitch %d \n", velocity, velocityIndex, velocityMap[velocityIndex], pitch);
@@ -111,7 +117,7 @@ void KeyHammer::check_note_on () {
 void KeyHammer::check_note_off () {
   if (noteOn){
     if ((keyPosition > noteOffThreshold) == (sensorFullyOff > sensorFullyOn)) {
-      MIDI.sendNoteOff(pitch, 64, 2);
+      sendNoteOffFnPtr(pitch, 64, 2);
       if (printNotes){
         Serial.printf("note off: noteOffThreshold %d, adcValue %d, velocity %d  pitch %d \n", noteOffThreshold, keyPosition, 64, pitch);
       }
@@ -135,7 +141,7 @@ void KeyHammer::step_pedal () {
   update_key();
   lastControlValue = controlValue;
   // this could be sped up by precomputing the possible values
-  controlValue = (int)((keyPosition - sensorFullyOff) / double(sensorFullyOn - sensorFullyOff) * 127);
+  controlValue = (int)((keyPosition - sensorFullyOff) / float(sensorFullyOn - sensorFullyOff) * 127);
   if (controlValue != lastControlValue) {
     // control numbers:
     // 1 = Modulation wheel
@@ -148,7 +154,7 @@ void KeyHammer::step_pedal () {
     // 67 = Soft Pedal
     // 71 = Resonance (filter)
     // 74 = Frequency Cutoff (filter)
-    MIDI.sendControlChange(	controlNumber, controlValue, 2);
+    sendControlChangeFnPtr(	controlNumber, controlValue, 2);
   }
   elapsed = 0;
 }
@@ -173,11 +179,11 @@ int KeyHammer::getAdcValue () {
 
 void KeyHammer::generateVelocityMap () {
   // generate values for velocity map
-  double logMultiplier;
+  float logMultiplier;
   for (int i = 0; i < velocityMapLength; i++) {
     // logMultiplier will always be between 0 and 1
-    logMultiplier = log(i / (double)velocityMapLength * (logBase - 1) + 1) / log(logBase);
-    velocityMap[i] = round(127 * i / (double)velocityMapLength);
+    logMultiplier = log(i / (float)velocityMapLength * (logBase - 1) + 1) / log(logBase);
+    velocityMap[i] = round(127 * i / (float)velocityMapLength);
   }
 }
 

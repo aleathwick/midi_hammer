@@ -5,10 +5,12 @@ import analogio # for AnalogIn
 import usb_midi
 # imports for spi with mcp3008
 import busio
+import adafruit_midi
 import digitalio
 import adafruit_mcp3xxx.mcp3008 as MCP
 from adafruit_mcp3xxx.analog_in import AnalogIn
 from src.midi_controllers import Key
+from adafruit_debouncer import Debouncer
 
 
 # initialize midi

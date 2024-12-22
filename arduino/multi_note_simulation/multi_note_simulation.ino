@@ -10,10 +10,7 @@ To do:
 
 */
 
-// choose the board type
-// either PICO, TEENSY
-// #define TEENSY
-#define PICO
+#include "config.h"
 
 // works with raspberry pico, using Earle Philhower's Raspberry Pico Arduino core:
 // https://github.com/earlephilhower/arduino-pico

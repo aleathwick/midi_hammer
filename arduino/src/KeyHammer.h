@@ -3,6 +3,7 @@
 // https://www.circuitbasics.com/programming-with-classes-and-objects-on-the-arduino/
 
 #pragma once
+#include "config.h"
 #include <elapsedMillis.h>
 
 class KeyHammer

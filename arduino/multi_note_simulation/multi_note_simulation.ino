@@ -1,7 +1,8 @@
 /*
 To do:
-- Add midi fn pointers to KeyHammer
+- Add midisender to KeyHammer
 - Basic adc read with teensy, based on cpy thresholds
+- Default midisender, and default arguments, modified by subclassing keyhammer? For ease of use
 - Tidy up cpp/header files
 - Bring in other changes from cpy
 - Calibration code

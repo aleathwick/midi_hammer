@@ -1,7 +1,8 @@
 # midi_hammer
 Raspberry pico firmware for measuring piano key positions, using those measurements to simulate hammer movements, and sending resultant velocity information over usb midi.  
-See a demo here:  
-https://youtu.be/tgWXtYCHDI4
+Videos of prototypes can be found here:  
+- [Latest prototype (5 keys)](https://youtu.be/U8PAwi5l6Sw)  
+- [24 key prototype](https://youtu.be/tgWXtYCHDI4)
 
 ## Arduino
 Uses [Earle Philhower's Raspberry Pico Arduino core](https://github.com/earlephilhower/arduino-pico), using Adafruit TinyUSB for usb midi.  

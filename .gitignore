@@ -6,3 +6,4 @@ circuitPython/adafruit/
 *.map
 *.rpipco
 *.lnk
+.ipynb_checkpoints/

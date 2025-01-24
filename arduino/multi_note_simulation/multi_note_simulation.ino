@@ -18,7 +18,7 @@ To do:
 // needs Adafruit TinyUSB for usb midi
 #include <Arduino.h>
 // MIDI Library: https://github.com/FortySevenEffects/arduino_midi_library
-#include <MIDI.h>
+// #include <MIDI.h>
 // elapsedMillis: https://github.com/pfeerick/elapsedMillis
 #include <elapsedMillis.h>
 // CircularBuffer: https://github.com/rlogiacco/CircularBuffer
@@ -28,14 +28,11 @@ To do:
 
 // board specific imports and midi setup
 #ifdef PICO
-  #include <Adafruit_TinyUSB.h>
-
-  // USB MIDI object
-  Adafruit_USBD_MIDI usb_midi;
-
-  // Create a new instance of the Arduino MIDI Library,
-  // and attach usb_midi as the transport.
-  MIDI_CREATE_INSTANCE(Adafruit_USBD_MIDI, usb_midi, MIDI);
+  #include "MidiSenderPico.h"
+  MidiSenderPico midiSender;
+#elif defined(TEENSY)
+  #include "MidiSenderTeensy.h"
+  MidiSenderTeensy midiSender;
 #endif
 
 //// c4051 setup
@@ -95,8 +92,8 @@ int testFunction() {
 
 const int n_keys = 2;
 KeyHammer keys[] = {
-  { []() -> int { return readAdc(0, 0, 0, 0); }, 49, 'h', 1000, 50 , 0.6, 8500},
-  { []() -> int { return readAdc(0, 0, 0, 1); }, 50, 'h', 1000, 50 , 0.6, 8500}
+  { []() -> int { return readAdc(0, 0, 0, 0); }, &midiSender, 49, 'h', 1000, 50 , 0.6, 8500},
+  { []() -> int { return readAdc(0, 0, 0, 1); }, &midiSender, 50, 'h', 1000, 50 , 0.6, 8500}
 };
 
 int printkey = 0;
@@ -128,16 +125,7 @@ void setup() {
   pinMode(2, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(2), decrement_printkey, CHANGE);
 
-  #ifdef PICO
-    usb_midi.setStringDescriptor("Laser Piano");
-
-    // Initialize MIDI, and listen to all MIDI channels
-    // This will also call usb_midi's begin()
-    MIDI.begin(MIDI_CHANNEL_OMNI);
-
-    // wait until device mounted
-    while (!USBDevice.mounted()) delay(1);
-  #endif
+  midiSender.initialize();
 }
 
 // can do setup on the other core too
@@ -165,10 +153,8 @@ void loop() {
     }
     
     loopTimer = 0;
-    // read any new MIDI messages
-    #ifdef PICO
-      MIDI.read();
-    #endif
+    // do any loop end actions, such as reading any new MIDI messages
+    midiSender.loopEnd();
   }
 }
   

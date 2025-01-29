@@ -22,8 +22,7 @@ void MidiSenderTeensy::sendControlChange(int controlNumber, int controlValue, in
 }
 
 void MidiSenderTeensy::initialize() {
-    // Set the USB MIDI product name for Teensy
-    usbMIDI.setHandleName("Laser Piano");
+    // no need to do anything here
 }
 
 void MidiSenderTeensy::loopEnd() {

@@ -43,7 +43,7 @@ KeyHammer::KeyHammer (int(*adcFnPtr)(void), MidiSender* midiSender, int pitch, c
 
   noteOn = false;
 
-  elapsed = 0;
+  elapsedUS = 0;
 
   lastControlValue = 0;
   controlValue = 0;
@@ -70,14 +70,14 @@ void KeyHammer::update_key () {
 }
 
 void KeyHammer::update_keyspeed () {
-  keySpeed = (keyPosition - lastKeyPosition) / (float)elapsed;
+  keySpeed = (keyPosition - lastKeyPosition) / (float)elapsedUS;
 }
 
 void KeyHammer::update_hammer () {
   // TODO: position should be updated using the mean of old and new speeds
   // see circuitpy code
-  hammerSpeed = hammerSpeed - gravity * elapsed;
-  hammerPosition = hammerPosition + hammerSpeed * elapsed;
+  hammerSpeed = hammerSpeed - gravity * elapsedUS;
+  hammerPosition = hammerPosition + hammerSpeed * elapsedUS;
   // check for interaction with key
   if ((hammerPosition > keyPosition) == (sensorFullyOff > sensorFullyOn)) {
           hammerPosition = keyPosition;
@@ -127,7 +127,7 @@ void KeyHammer::step_hammer () {
   // test();
   check_note_on();
   check_note_off();
-  elapsed = 0;
+  elapsedUS = 0;
 }
 
 
@@ -150,7 +150,7 @@ void KeyHammer::step_pedal () {
     // 74 = Frequency Cutoff (filter)
     midiSender->sendControlChange(controlNumber, controlValue, 2);
   }
-  elapsed = 0;
+  elapsedUS = 0;
 }
 
 void KeyHammer::step () {
@@ -185,13 +185,14 @@ void KeyHammer::printState () {
   if (operationMode=='p'){
     Serial.printf("key_%d:%f,", pitch, keyPosition);
     Serial.printf("rawADC_%d:%d,", pitch, rawADC);
-    Serial.printf("elapsed_%d:%d,", pitch, (int)elapsed);
-    Serial.printf("controlValue_%d:%d,", controlValue, (int)elapsed);
+    Serial.printf("elapsedUS_%d:%d,", pitch, (int)elapsedUS);
+    Serial.printf("controlValue_%d:%d,", controlValue, (int)elapsedUS);
   } else if (operationMode=='h'){
     // Serial.printf("%d %f %f ", keyPosition, keySpeed, hammerSpeed);
     Serial.printf("hammer_%d:%f,", pitch, hammerPosition);
     Serial.printf("rawADC_%d:%d,", pitch, rawADC);
-    Serial.printf("elapsed_%d:%d,", pitch, (int)elapsed);
+    Serial.printf("hammerSpeed_%d:%f,", pitch, hammerSpeed);
+    // Serial.printf("elapsedUS_%d:%d,", pitch, (int)elapsedUS);
   }
 
 }

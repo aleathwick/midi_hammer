@@ -70,8 +70,8 @@ int readAdc(int enable_i, int address_0, int address_1, int address_2) {
 
 // can turn to int like so: int micros = elapsed[i][j];
 // and reset to zero: elapsed[i][j] = 0;
-elapsedMillis infoTimer;
-elapsedMicros loopTimer;
+elapsedMillis infoTimerMS;
+elapsedMicros loopTimerUS;
 
 
 // whether or not to print in the current loop
@@ -79,12 +79,12 @@ bool printInfo = true;
 // whether to use print statements for arduino serial plotter; if false, print text and disregard serial plotter formatting
 const bool plotSerial = true;
 // used to restrict printing to only a few iterations after certain events
-elapsedMillis printTimer = 0;
+elapsedMillis printTimerMS = 0;
 
-elapsedMillis testAdcTimer;
+elapsedMillis testAdcTimerMS;
 int testFunction() {
   // test function for getting key position
-  return (int)(sin(testAdcTimer / (float)300) * 512) + 512;
+  return (int)(sin(testAdcTimerMS / (float)300) * 512) + 512;
 }
 
 const int n_keys = 2;
@@ -131,11 +131,11 @@ void setup() {
 // }
 
 void loop() {
-  if (printTimer > 100) {
+  if (printTimerMS > 100) {
     printInfo = true;
   }
 
-  if (keys[0].elapsed >= 1250) {
+  if (keys[0].elapsedUS >= 1250) {
     for (int i = 0; i < n_keys; i++) {
       if (printInfo & i == printkey) {
         keys[i].printState();
@@ -147,9 +147,10 @@ void loop() {
     if (printInfo) {
       Serial.print('\n');
       printInfo = false;
+      printTimerMS = 0;
     }
     
-    loopTimer = 0;
+    loopTimerUS = 0;
     // do any loop end actions, such as reading any new MIDI messages
     midiSender.loopEnd();
   }

@@ -82,5 +82,5 @@ class KeyHammer
     int controlNumber;
     void printState();
 
-    elapsedMicros elapsed;
+    elapsedMicros elapsedUS;
 };

@@ -2,7 +2,9 @@
 #ifdef PICO
 #include "MidiSenderPico.h"
 // initialize midi
+// tinyUSB library is used for USB MIDI
 #include <Adafruit_TinyUSB.h>
+// https://github.com/FortySevenEffects/arduino_midi_library
 #include <MIDI.h>
 Adafruit_USBD_MIDI usb_midi;
 MIDI_CREATE_INSTANCE(Adafruit_USBD_MIDI, usb_midi, MIDI);

@@ -13,12 +13,6 @@ To do:
 
 #include "config.h"
 
-// works with raspberry pico, using Earle Philhower's Raspberry Pico Arduino core:
-// https://github.com/earlephilhower/arduino-pico
-// needs Adafruit TinyUSB for usb midi
-#include <Arduino.h>
-// MIDI Library: https://github.com/FortySevenEffects/arduino_midi_library
-// #include <MIDI.h>
 // elapsedMillis: https://github.com/pfeerick/elapsedMillis
 #include <elapsedMillis.h>
 // CircularBuffer: https://github.com/rlogiacco/CircularBuffer
@@ -28,6 +22,9 @@ To do:
 
 // board specific imports and midi setup
 #ifdef PICO
+  // pico version uses Earle Philhower's Raspberry Pico Arduino core:
+  // https://github.com/earlephilhower/arduino-pico
+  // tinyUSB is used for USB MIDI, see MidiSenderPico.cpp
   #include "MidiSenderPico.h"
   MidiSenderPico midiSender;
 #elif defined(TEENSY)

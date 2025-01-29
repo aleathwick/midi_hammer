@@ -3,20 +3,16 @@
 // https://www.circuitbasics.com/programming-with-classes-and-objects-on-the-arduino/
 
 #pragma once
+#include "config.h"
 #include <elapsedMillis.h>
+#include "MidiSender.h"
 
 class KeyHammer
 {
     // a pointer to a function that will return the position of the key
     // see here: https://forum.arduino.cc/t/function-as-a-parameter-in-class-object-function-pointer-in-library/461967/7
     int(*adcFnPtr)(void);
-    // pointers to functions for handling midi messages
-    // by default, won't do anything
-    // need to make a derived class to change behaviour
-    // see here: https://www.learncpp.com/cpp-tutorial/basic-inheritance-in-c/
-    void(*sendNoteOnFnPtr)(int pitch, int velocity, int channel);
-    void(*sendNoteOffFnPtr)(int pitch, int velocity, int channel);
-    void(*sendControlChangeFnPtr)(int controlNumber, int controlValue, int channel);
+    MidiSender* midiSender;
     // define the range of the sensors, with sensorFullyOn being the key fully depressed
   // this will work regardless of sensorFullyOn < sensorFullyOff or sensorFullyOff < sensorFullyOn
     int sensorFullyOn;
@@ -71,7 +67,7 @@ class KeyHammer
     void step_pedal();
 
   public:
-    KeyHammer(int(*adcFnPtr)(void), int pitch, char operationMode, int sensorFullyOn, int sensorFullyOff, float hammer_travel, int minPressUS);
+    KeyHammer(int(*adcFnPtr)(void), MidiSender* midiSender,int pitch, char operationMode, int sensorFullyOn, int sensorFullyOff, float hammer_travel, int minPressUS);
     void step();
     // operation mode switches between operation as a hammer simulation key, a key, or a pedal
     char operationMode;

@@ -1,13 +1,18 @@
-// works with raspberry pico, using Earle Philhower's Raspberry Pico Arduino core:
-// https://github.com/earlephilhower/arduino-pico
-// needs Adafruit TinyUSB for usb midi
-#include <Arduino.h>
-#include <Adafruit_TinyUSB.h>
-#include <Adafruit_MCP3008.h>
-// mcp3208 library: 
-#include <MCP3208.h>
-// MIDI Library: https://github.com/FortySevenEffects/arduino_midi_library
-#include <MIDI.h>
+/*
+To do:
+- Add midisender to KeyHammer
+- Basic adc read with teensy, based on cpy thresholds
+- Default midisender, and default arguments, modified by subclassing keyhammer? For ease of use
+- Tidy up cpp/header files
+- Bring in other changes from cpy
+- Calibration code
+- Benchmark
+- SG filter
+
+*/
+
+#include "config.h"
+
 // elapsedMillis: https://github.com/pfeerick/elapsedMillis
 #include <elapsedMillis.h>
 // CircularBuffer: https://github.com/rlogiacco/CircularBuffer
@@ -15,23 +20,53 @@
 #include <math.h>
 #include "KeyHammer.h"
 
+// board specific imports and midi setup
+#ifdef PICO
+  // pico version uses Earle Philhower's Raspberry Pico Arduino core:
+  // https://github.com/earlephilhower/arduino-pico
+  // tinyUSB is used for USB MIDI, see MidiSenderPico.cpp
+  #include "MidiSenderPico.h"
+  MidiSenderPico midiSender;
+#elif defined(TEENSY)
+  #include "MidiSenderTeensy.h"
+  MidiSenderTeensy midiSender;
+#endif
 
+//// c4051 setup
+#ifdef PICO
+  const int address_pins[] = {18, 17, 16};
+  const int enable_pins[] = {20, 19};
+  int signal_pin = 27; // A1 / GP27
 
-// ADCs
-// MCP3208 adcs[2];
-Adafruit_MCP3008 adcs[3];
-int adcCount = 3;
-int adcSelects[] = { 26, 22, 17 };
+#elif defined(TEENSY)
+  const int address_pins[] = {33, 34, 35};
+  const int enable_pins[] = {40, 39};
+  int signal_pin = 15; // A1
+#endif
 
-// USB MIDI object
-Adafruit_USBD_MIDI usb_midi;
+int n_enable = sizeof(enable_pins) / sizeof(enable_pins[0]);
 
-// Create a new instance of the Arduino MIDI Library,
-// and attach usb_midi as the transport.
-MIDI_CREATE_INSTANCE(Adafruit_USBD_MIDI, usb_midi, MIDI);
+// function pointer type for ADC reading functions
+typedef int (*ReadAdcFn)();
 
+// function to update the states of the address and enable pins
+void updateMuxAddress(int enable_i, int address_0, int address_1, int address_2) {
+  // update address pins
+  digitalWrite(address_pins[0], address_0);
+  digitalWrite(address_pins[1], address_1);
+  digitalWrite(address_pins[2], address_2);
+  
+  // Update enable pins
+  for (int i = 0; i < n_enable; i++) {
+      digitalWrite(enable_pins[i], i == enable_i ? LOW : HIGH);
+  }
+}
 
-
+// Function to read ADC value for a specific configuration
+int readAdc(int enable_i, int address_0, int address_1, int address_2) {
+  updateMuxAddress(enable_i, address_0, address_1, address_2);
+  return analogRead(signal_pin);
+}
 
 // can turn to int like so: int micros = elapsed[i][j];
 // and reset to zero: elapsed[i][j] = 0;
@@ -52,45 +87,11 @@ int testFunction() {
   return (int)(sin(testAdcTimer / (float)300) * 512) + 512;
 }
 
-
-// const int n_keys = 24;
-
-// KeyHammer keys[] = { { []() -> int { return adcs[0].readADC(7); }, 48, 'h',390,50, 0.6, 8500},
-//                     { []() -> int { return adcs[0].readADC(6); }, 49, 'h', 320, 50 , 0.6, 8500},//allegro324
-//                     { []() -> int { return adcs[0].readADC(5); }, 50, 'h', 390, 50 , 0.6, 8500},
-//                     { []() -> int { return adcs[0].readADC(4); }, 51, 'h', 390, 50 , 0.6, 8500},
-//                     { []() -> int { return adcs[0].readADC(3); }, 52, 'h', 390, 50 , 0.6, 8500},
-//                     { []() -> int { return adcs[0].readADC(2); }, 53, 'h', 390, 50 , 0.6, 8500},
-//                     { []() -> int { return adcs[0].readADC(1); }, 54, 'h', 390, 50 , 0.6, 8500},
-//                     { []() -> int { return adcs[0].readADC(0); }, 55, 'h', 390, 50 , 0.6, 8500},
-//                     { []() -> int { return adcs[1].readADC(7); }, 56, 'h', 390, 50 , 0.6, 8500},
-//                     { []() -> int { return adcs[1].readADC(6); }, 57, 'h', 390, 50 , 0.6, 8500},
-//                     { []() -> int { return adcs[1].readADC(5); }, 58, 'h', 390, 50 , 0.6, 8500},
-//                     { []() -> int { return adcs[1].readADC(4); }, 59, 'h', 320, 50 , 0.6, 8500},//allegro324
-//                     { []() -> int { return adcs[1].readADC(3); }, 60, 'h', 390, 50 , 0.6, 8500},
-//                     { []() -> int { return adcs[1].readADC(2); }, 61, 'h', 390, 50 , 0.6, 8500},
-//                     { []() -> int { return adcs[1].readADC(1); }, 62, 'h', 390, 50 , 0.6, 8500},
-//                     { []() -> int { return adcs[1].readADC(0); }, 63, 'h', 390, 50 , 0.6, 8500},
-//                     { []() -> int { return adcs[2].readADC(7); }, 64, 'h', 390, 50 , 0.6, 8500},
-//                     { []() -> int { return adcs[2].readADC(6); }, 65, 'h', 390, 50 , 0.6, 8500},
-//                     { []() -> int { return adcs[2].readADC(5); }, 66, 'h', 390, 50 , 0.6, 8500},
-//                     { []() -> int { return adcs[2].readADC(4); }, 67, 'h', 390, 50 , 0.6, 8500},
-//                     { []() -> int { return adcs[2].readADC(3); }, 68, 'h', 390, 50 , 0.6, 8500},
-//                     { []() -> int { return adcs[2].readADC(2); }, 69, 'h', 390, 50 , 0.6, 8500},
-//                     { []() -> int { return adcs[2].readADC(1); }, 70, 'h', 390, 50 , 0.6, 8500},
-//                     { []() -> int { return adcs[2].readADC(0); }, 71, 'h', 390, 50 , 0.6, 8500}
-//                   };
-
-const int n_keys = 7;
-
-KeyHammer keys[] = { { []() -> int { return adcs[2].readADC(0); }, 48, 'h',1000,50, 0.6, 8500},
-                    { []() -> int { return adcs[2].readADC(1); }, 49, 'h', 1000, 50 , 0.6, 8500},
-                    { []() -> int { return adcs[2].readADC(2); }, 50, 'h', 1000, 50 , 0.6, 8500},
-                    { []() -> int { return adcs[2].readADC(3); }, 51, 'h', 1000, 50 , 0.6, 8500},
-                    { []() -> int { return adcs[2].readADC(4); }, 52, 'h', 1000, 50 , 0.6, 8500},
-                    { []() -> int { return adcs[2].readADC(5); }, 53, 'h', 1000, 50 , 0.6, 8500},
-                    { []() -> int { return adcs[2].readADC(6); }, 54, 'h', 1000, 50 , 0.6, 8500}
-                  };
+const int n_keys = 2;
+KeyHammer keys[] = {
+  { []() -> int { return readAdc(0, 0, 0, 0); }, &midiSender, 49, 'h', 1000, 50 , 0.6, 8500},
+  { []() -> int { return readAdc(0, 0, 0, 1); }, &midiSender, 50, 'h', 1000, 50 , 0.6, 8500}
+};
 
 int printkey = 0;
 void increment_printkey () {
@@ -115,30 +116,13 @@ void decrement_printkey () {
 
 void setup() {
   Serial.begin(57600);
-  // begin ADC
-  // can set SPI default pins
-  //  SPI.setCS(5);
-  //  SPI.setSCK(2);
-  //  SPI.setTX(3);
-  //  SPI.setRX(4);
-  for (int i = 0; i < adcCount; i++) {
-    adcs[i].begin(adcSelects[i]);
-  }
-
   pinMode(LED_BUILTIN, OUTPUT);
   pinMode(1, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(1), increment_printkey, CHANGE);
   pinMode(2, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(2), decrement_printkey, CHANGE);
 
-  usb_midi.setStringDescriptor("Laser Piano");
-
-  // Initialize MIDI, and listen to all MIDI channels
-  // This will also call usb_midi's begin()
-  MIDI.begin(MIDI_CHANNEL_OMNI);
-
-  // wait until device mounted
-  while (!USBDevice.mounted()) delay(1);
+  midiSender.initialize();
 }
 
 // can do setup on the other core too
@@ -166,8 +150,8 @@ void loop() {
     }
     
     loopTimer = 0;
-    // read any new MIDI messages
-    MIDI.read();
+    // do any loop end actions, such as reading any new MIDI messages
+    midiSender.loopEnd();
   }
 }
   

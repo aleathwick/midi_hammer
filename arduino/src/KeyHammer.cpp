@@ -26,10 +26,14 @@ KeyHammer::KeyHammer (int(*adcFnPtr)(void), MidiSender* midiSender, int pitch, c
   noteOnThreshold = sensorFullyOn + 0.06 * (sensorFullyOn - sensorFullyOff);
   noteOffThreshold = sensorFullyOn - 0.5 * (sensorFullyOn - sensorFullyOff);
 
-  // gravity for hammer, measured in adc bits per microsecond per microsecond
-  // if the key press is ADC_range, where ADC_range is abs(sensorFullyOn - sensorFullyOff)
-  // hammer travel in mm; used to calculate gravity in adc bits
-  gravity = (float)9810000000 / hammer_travel * (sensorFullyOn - sensorFullyOff);
+  // gravity calculation
+  // gravity in metres per microsecond^2
+  float gravity_m = 9.81e-12;
+  // gravity in mm per microsecond^2
+  float gravity_mm = gravity_m * 1000;
+  // gravity in adc bits per microsecond^2
+  // hammer travel is in mm
+  gravity = gravity_mm  / hammer_travel * (sensorFullyOn - sensorFullyOff);
 
   keyPosition = sensorFullyOff;
   lastKeyPosition = sensorFullyOff;

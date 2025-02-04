@@ -25,6 +25,7 @@ KeyHammer::KeyHammer (int(*adcFnPtr)(void), MidiSender* midiSender, int pitch, c
 
   noteOnThreshold = sensorFullyOn + 0.06 * (sensorFullyOn - sensorFullyOff);
   noteOffThreshold = sensorFullyOn - 0.5 * (sensorFullyOn - sensorFullyOff);
+  keyResetThreshold = sensorFullyOn - 0.25 * (sensorFullyOn - sensorFullyOff);
 
   // gravity calculation
   // gravity in metres per microsecond^2
@@ -46,6 +47,7 @@ KeyHammer::KeyHammer (int(*adcFnPtr)(void), MidiSender* midiSender, int pitch, c
   hammerSpeedScaler = velocityMapLength / maxHammerSpeed;
 
   noteOn = false;
+  keyArmed = true;
 
   elapsedUS = 0;
 
@@ -97,13 +99,14 @@ void KeyHammer::update_hammer () {
 
 void KeyHammer::check_note_on () {
   // check for note ons
-  if ((hammerPosition < noteOnThreshold) == (sensorFullyOff > sensorFullyOn)) {
+  if (keyArmed && (hammerPosition < noteOnThreshold) == (sensorFullyOff > sensorFullyOn)) {
     // do something with hammer speed to get velocity
     velocity = hammerSpeed;
     velocityIndex = round(hammerSpeed * hammerSpeedScaler);
     velocityIndex = min(velocityIndex, velocityMapLength-1);
     midiSender->sendNoteOn(pitch, velocityMap[velocityIndex], 2);
     noteOn = true;
+    keyArmed = false;
     if (printNotes){ //&& ((i == 0 && j == 0) || (i == 1 && j == 2))){
       Serial.printf("\n note on: hammerSpeed %f, velocityIndex %d, velocity %d pitch %d \n", velocity, velocityIndex, velocityMap[velocityIndex], pitch);
     }
@@ -114,6 +117,10 @@ void KeyHammer::check_note_on () {
 
 void KeyHammer::check_note_off () {
   if (noteOn){
+    if ((! keyArmed) && ((keyPosition > keyResetThreshold) == (sensorFullyOff > sensorFullyOn))) {
+      keyArmed = true;
+    }
+
     if ((keyPosition > noteOffThreshold) == (sensorFullyOff > sensorFullyOn)) {
       midiSender->sendNoteOff(pitch, 64, 2);
       if (printNotes){

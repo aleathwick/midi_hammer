@@ -21,6 +21,8 @@ class KeyHammer
     int noteOnThreshold;
     // threshold for key to trigger noteoff
     int noteOffThreshold;
+    // threshold for key to reset
+    int keyResetThreshold;
     int sensorMin;
     int sensorMax;
 
@@ -38,6 +40,7 @@ class KeyHammer
     float gravity;
 
     bool noteOn;
+    bool keyArmed;
     float velocity;
     int velocityIndex;
 

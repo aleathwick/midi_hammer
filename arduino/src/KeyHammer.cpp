@@ -104,6 +104,8 @@ void KeyHammer::check_note_on () {
     velocity = hammerSpeed;
     velocityIndex = round(hammerSpeed * hammerSpeedScaler);
     velocityIndex = min(velocityIndex, velocityMapLength-1);
+    // sometimes negative values for velocityIndex occur, probably due to a mismatch between thresholds and actual ADC range
+    velocityIndex = max(velocityIndex, 0);
     midiSender->sendNoteOn(pitch, velocityMap[velocityIndex], 2);
     noteOn = true;
     keyArmed = false;

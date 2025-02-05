@@ -65,6 +65,13 @@ void updateMuxAddress(int enableI, int address_0, int address_1, int address_2) 
 // Function to read ADC value for a specific configuration
 int readAdc(int enable_i, int address_0, int address_1, int address_2) {
   updateMuxAddress(enable_i, address_0, address_1, address_2);
+  // sleep for a bit to allow the mux to settle
+  // 1us is enough over 30cm long (26awg) cables and 5v powered 74hc4051, 3v powered 49e sensors
+  // 2us needed for 3v powered hc4051
+  // 5 or 6us needed for 3v powered 74hc4051 with 60cm long cables
+  delayMicroseconds(1);
+  // delayNanoseconds only works on teensy
+  // delayNanoseconds(1000);
   return analogRead(signalPin);
 }
 

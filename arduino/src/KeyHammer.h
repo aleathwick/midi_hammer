@@ -59,15 +59,15 @@ class KeyHammer
     bool printNotes;
 
 
-    void update_key();
-    void update_keyspeed();
-    void update_hammer();
-    void check_note_on();
-    void check_note_off();
+    void updateKey();
+    void updateKeySpeed();
+    void updateHammer();
+    void checkNoteOn();
+    void checkNoteOff();
     void test();
-    void step_hammer();
-    void step_key();
-    void step_pedal();
+    void stepHammer();
+    void stepKey();
+    void stepPedal();
 
   public:
     KeyHammer(int(*adcFnPtr)(void), MidiSender* midiSender,int pitch, char operationMode, int sensorFullyOn, int sensorFullyOff, float hammer_travel, int minPressUS);

@@ -34,38 +34,38 @@ To do:
 
 //// c4051 setup
 #ifdef PICO
-  const int address_pins[] = {18, 17, 16};
-  const int enable_pins[] = {20, 19};
-  int signal_pin = 27; // A1 / GP27
+  const int addressPins[] = {18, 17, 16};
+  const int enablePins[] = {20, 19};
+  int signalPin = 27; // A1 / GP27
 
 #elif defined(TEENSY)
-  const int address_pins[] = {33, 34, 35};
-  const int enable_pins[] = {40, 39};
-  int signal_pin = 15; // A1
+  const int addressPins[] = {35, 34, 33};
+  const int enablePins[] = {39, 40};
+  int signalPin = 15; // A1
 #endif
 
-int n_enable = sizeof(enable_pins) / sizeof(enable_pins[0]);
+int nEnable = sizeof(enablePins) / sizeof(enablePins[0]);
 
 // function pointer type for ADC reading functions
 typedef int (*ReadAdcFn)();
 
 // function to update the states of the address and enable pins
-void updateMuxAddress(int enable_i, int address_0, int address_1, int address_2) {
+void updateMuxAddress(int enableI, int address_0, int address_1, int address_2) {
   // update address pins
-  digitalWrite(address_pins[0], address_0);
-  digitalWrite(address_pins[1], address_1);
-  digitalWrite(address_pins[2], address_2);
+  digitalWrite(addressPins[0], address_0);
+  digitalWrite(addressPins[1], address_1);
+  digitalWrite(addressPins[2], address_2);
   
   // Update enable pins
-  for (int i = 0; i < n_enable; i++) {
-      digitalWrite(enable_pins[i], i == enable_i ? LOW : HIGH);
+  for (int i = 0; i < nEnable; i++) {
+      digitalWrite(enablePins[i], i == enableI ? LOW : HIGH);
   }
 }
 
 // Function to read ADC value for a specific configuration
 int readAdc(int enable_i, int address_0, int address_1, int address_2) {
   updateMuxAddress(enable_i, address_0, address_1, address_2);
-  return analogRead(signal_pin);
+  return analogRead(signalPin);
 }
 
 // can turn to int like so: int micros = elapsed[i][j];
@@ -94,7 +94,7 @@ KeyHammer keys[] = {
 };
 
 int printkey = 0;
-void increment_printkey () {
+void incrementPrintKey () {
   // Serial.print("Interrupt ");
   // Serial.print(y++);
   // Serial.println();
@@ -103,7 +103,7 @@ void increment_printkey () {
     printkey = (printkey + 1) % n_keys;
   }
 }
-void decrement_printkey () {
+void decrementPrintKey () {
   // Serial.print("Interrupt ");
   // Serial.print(y++);
   // Serial.println();
@@ -118,9 +118,9 @@ void setup() {
   Serial.begin(57600);
   pinMode(LED_BUILTIN, OUTPUT);
   pinMode(1, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(1), increment_printkey, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(1), incrementPrintKey, CHANGE);
   pinMode(2, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(2), decrement_printkey, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(2), decrementPrintKey, CHANGE);
 
   midiSender.initialize();
 }

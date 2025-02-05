@@ -65,7 +65,7 @@ KeyHammer::KeyHammer (int(*adcFnPtr)(void), MidiSender* midiSender, int pitch, c
 
 }
 
-void KeyHammer::update_key () {
+void KeyHammer::updateKey () {
   lastKeyPosition = keyPosition;
   rawADC = getAdcValue();
   keyPosition = rawADC;
@@ -75,11 +75,11 @@ void KeyHammer::update_key () {
 
 }
 
-void KeyHammer::update_keyspeed () {
+void KeyHammer::updateKeySpeed () {
   keySpeed = (keyPosition - lastKeyPosition) / (float)elapsedUS;
 }
 
-void KeyHammer::update_hammer () {
+void KeyHammer::updateHammer () {
   // TODO: position should be updated using the mean of old and new speeds
   // see circuitpy code
   hammerSpeed = hammerSpeed - gravity * elapsedUS;
@@ -97,7 +97,7 @@ void KeyHammer::update_hammer () {
   }
 }
 
-void KeyHammer::check_note_on () {
+void KeyHammer::checkNoteOn () {
   // check for note ons
   if (keyArmed && (hammerPosition < noteOnThreshold) == (sensorFullyOff > sensorFullyOn)) {
     // do something with hammer speed to get velocity
@@ -117,7 +117,7 @@ void KeyHammer::check_note_on () {
     }
 }
 
-void KeyHammer::check_note_off () {
+void KeyHammer::checkNoteOff () {
   if (noteOn){
     if ((! keyArmed) && ((keyPosition > keyResetThreshold) == (sensorFullyOff > sensorFullyOn))) {
       keyArmed = true;
@@ -133,19 +133,19 @@ void KeyHammer::check_note_off () {
   }
 }
 
-void KeyHammer::step_hammer () {
-  update_key();
-  update_keyspeed();
-  update_hammer();
+void KeyHammer::stepHammer () {
+  updateKey();
+  updateKeySpeed();
+  updateHammer();
   // test();
-  check_note_on();
-  check_note_off();
+  checkNoteOn();
+  checkNoteOff();
   elapsedUS = 0;
 }
 
 
-void KeyHammer::step_pedal () {
-  update_key();
+void KeyHammer::stepPedal () {
+  updateKey();
   lastControlValue = controlValue;
   // this could be sped up by precomputing the possible values
   controlValue = (int)((keyPosition - sensorFullyOff) / float(sensorFullyOn - sensorFullyOff) * 127);
@@ -169,10 +169,10 @@ void KeyHammer::step_pedal () {
 void KeyHammer::step () {
   if (operationMode=='h')
   {
-    step_hammer();
+    stepHammer();
   } else if (operationMode=='p')
   {
-    step_pedal();
+    stepPedal();
   }
 }
 

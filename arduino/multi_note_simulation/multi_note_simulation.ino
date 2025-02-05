@@ -154,6 +154,7 @@ void loop() {
     for (int i = 0; i < n_keys; i++) {
       if (printInfo & i == printkey) {
         keys[i].printState();
+        Serial.flush();
       }
       keys[i].step();
 

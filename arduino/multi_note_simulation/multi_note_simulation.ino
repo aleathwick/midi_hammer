@@ -130,6 +130,14 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(2), decrementPrintKey, CHANGE);
 
   midiSender.initialize();
+
+  // ADC settings
+  #ifdef TEENSY
+    // default is averaging 4 samples, which takes 16-17us
+    // takes around 7us for 1 sample
+    analogReadAveraging(1);
+    // analogReadResolution(12);
+  #endif
 }
 
 // can do setup on the other core too

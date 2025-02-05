@@ -4,6 +4,7 @@
 
 #pragma once
 #include "config.h"
+#include <CircularBuffer.hpp>
 #include <elapsedMillis.h>
 #include "MidiSender.h"
 
@@ -12,6 +13,8 @@ class KeyHammer
     // a pointer to a function that will return the position of the key
     // see here: https://forum.arduino.cc/t/function-as-a-parameter-in-class-object-function-pointer-in-library/461967/7
     int(*adcFnPtr)(void);
+    // a circular buffer to store the last n adc values
+    CircularBuffer<int, ADC_BUFFER_SIZE> adcBuffer;
     MidiSender* midiSender;
     // define the range of the sensors, with sensorFullyOn being the key fully depressed
   // this will work regardless of sensorFullyOn < sensorFullyOff or sensorFullyOff < sensorFullyOn

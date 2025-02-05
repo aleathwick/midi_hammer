@@ -4,3 +4,5 @@
 // either PICO, TEENSY
 // #define TEENSY
 #define PICO
+
+#define ADC_BUFFER_SIZE 30

@@ -65,6 +65,10 @@ KeyHammer::KeyHammer (int(*adcFnPtr)(void), MidiSender* midiSender, int pitch, c
 
 }
 
+void KeyHammer::updateElapsed () {
+  elapsedUSBuffer.push(elapsedUS);
+}
+
 void KeyHammer::updateKey () {
   lastKeyPosition = keyPosition;
   rawADC = getAdcValue();
@@ -77,14 +81,14 @@ void KeyHammer::updateKey () {
 }
 
 void KeyHammer::updateKeySpeed () {
-  keySpeed = (keyPosition - lastKeyPosition) / (float)elapsedUS;
+  keySpeed = (keyPosition - lastKeyPosition) / (float)elapsedUSBuffer.last();
 }
 
 void KeyHammer::updateHammer () {
   // TODO: position should be updated using the mean of old and new speeds
   // see circuitpy code
-  hammerSpeed = hammerSpeed - gravity * elapsedUS;
-  hammerPosition = hammerPosition + hammerSpeed * elapsedUS;
+  hammerSpeed = hammerSpeed - gravity * elapsedUSBuffer.last();
+  hammerPosition = hammerPosition + hammerSpeed * elapsedUSBuffer.last();
   // check for interaction with key
   if ((hammerPosition > keyPosition) == (sensorFullyOff > sensorFullyOn)) {
           hammerPosition = keyPosition;
@@ -96,6 +100,7 @@ void KeyHammer::updateHammer () {
           // }
         // }
   }
+  hammerPositionBuffer.push(hammerPosition);
 }
 
 void KeyHammer::checkNoteOn () {
@@ -113,6 +118,9 @@ void KeyHammer::checkNoteOn () {
     if (printNotes){ //&& ((i == 0 && j == 0) || (i == 1 && j == 2))){
       Serial.printf("\n note on: hammerSpeed %f, velocityIndex %d, velocity %d pitch %d \n", velocity, velocityIndex, velocityMap[velocityIndex], pitch);
     }
+    // maybe print the buffer on note on?
+    // could be useful for understanding adc/key/hammer behaviour
+    // printBuffers();
     hammerPosition = noteOnThreshold;
     hammerSpeed = -hammerSpeed;
     }
@@ -136,6 +144,8 @@ void KeyHammer::checkNoteOff () {
 
 void KeyHammer::stepHammer () {
   updateKey();
+  // call updateElapsed after updateKey because reading the ADC value is the slowest part of the loop
+  updateElapsed();
   updateKeySpeed();
   updateHammer();
   // test();
@@ -147,6 +157,7 @@ void KeyHammer::stepHammer () {
 
 void KeyHammer::stepPedal () {
   updateKey();
+  updateElapsed();
   lastControlValue = controlValue;
   // this could be sped up by precomputing the possible values
   controlValue = (int)((keyPosition - sensorFullyOff) / float(sensorFullyOn - sensorFullyOff) * 127);
@@ -199,14 +210,24 @@ void KeyHammer::printState () {
   if (operationMode=='p'){
     Serial.printf("key_%d:%f,", pitch, keyPosition);
     Serial.printf("rawADC_%d:%d,", pitch, rawADC);
-    Serial.printf("elapsedUS_%d:%d,", pitch, (int)elapsedUS);
-    Serial.printf("controlValue_%d:%d,", controlValue, (int)elapsedUS);
+    Serial.printf("elapsedUS_%d:%d,", pitch, elapsedUSBuffer.last());
+    Serial.printf("controlValue_%d:%d,", pitch, controlValue);
   } else if (operationMode=='h'){
     // Serial.printf("%d %f %f ", keyPosition, keySpeed, hammerSpeed);
     Serial.printf("hammer_%d:%f,", pitch, hammerPosition);
     Serial.printf("rawADC_%d:%d,", pitch, rawADC);
     Serial.printf("hammerSpeed_%d:%f,", pitch, hammerSpeed);
-    // Serial.printf("elapsedUS_%d:%d,", pitch, (int)elapsedUS);
+    Serial.printf("elapsedUS_%d:%d,", pitch, elapsedUSBuffer.last());
   }
 
+}
+
+void KeyHammer::printBuffers () {
+    for (int i = 0; i < adcBuffer.size(); ++i) {
+      Serial.printf("rawADC_%d:%d,", pitch, adcBuffer[i]);
+      Serial.printf("hammerPosition_%d:%d,", pitch, hammerPositionBuffer[i]);
+      Serial.printf("elapsedUs_%d:%d,", pitch, elapsedUSBuffer[i]);
+      Serial.printf("\n");
+      Serial.flush();
+    }
 }

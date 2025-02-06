@@ -14,7 +14,9 @@ class KeyHammer
     // see here: https://forum.arduino.cc/t/function-as-a-parameter-in-class-object-function-pointer-in-library/461967/7
     int(*adcFnPtr)(void);
     // a circular buffer to store the last n adc values
-    CircularBuffer<int, ADC_BUFFER_SIZE> adcBuffer;
+    CircularBuffer<int, BUFFER_SIZE> adcBuffer;
+    CircularBuffer<int, BUFFER_SIZE> hammerPositionBuffer;
+    CircularBuffer<int, BUFFER_SIZE> elapsedUSBuffer;
     MidiSender* midiSender;
     // define the range of the sensors, with sensorFullyOn being the key fully depressed
   // this will work regardless of sensorFullyOn < sensorFullyOff or sensorFullyOff < sensorFullyOn
@@ -62,6 +64,7 @@ class KeyHammer
     bool printNotes;
 
 
+    void updateElapsed();
     void updateKey();
     void updateKeySpeed();
     void updateHammer();
@@ -71,6 +74,7 @@ class KeyHammer
     void stepHammer();
     void stepKey();
     void stepPedal();
+    void printBuffers();
 
   public:
     KeyHammer(int(*adcFnPtr)(void), MidiSender* midiSender,int pitch, char operationMode, int sensorFullyOn, int sensorFullyOff, float hammer_travel, int minPressUS);

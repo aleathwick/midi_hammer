@@ -150,10 +150,12 @@ void KeyHammer::stepHammer () {
   // call updateElapsed after updateKey because reading the ADC value is the slowest part of the loop
   updateElapsed();
   updateKeySpeed();
-  updateHammer();
-  // test();
-  checkNoteOn();
-  checkNoteOff();
+  if (iteration > BUFFER_SIZE) {
+    updateHammer();
+    // test();
+    checkNoteOn();
+    checkNoteOff();
+  }
   elapsedUS = 0;
 }
 
@@ -189,6 +191,7 @@ void KeyHammer::step () {
   {
     stepPedal();
   }
+  iteration++;
 }
 
 void KeyHammer::test () {

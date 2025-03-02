@@ -74,6 +74,8 @@ class KeyHammer
     // parameters for pedal mode
     int lastControlValue;
     int controlValue;
+    // track number of simulation iterations
+    int iteration = 0;
 
     // whether or not to print note on/offs
     bool printNotes;

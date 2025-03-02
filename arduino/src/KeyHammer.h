@@ -15,7 +15,7 @@ class KeyHammer
     int(*adcFnPtr)(void);
     // a circular buffer to store the last n adc values
     CircularBuffer<int, BUFFER_SIZE> adcBuffer;
-    CircularBuffer<int, BUFFER_SIZE> hammerPositionBuffer;
+    CircularBuffer<float, BUFFER_SIZE> hammerPositionBuffer;
     CircularBuffer<int, BUFFER_SIZE> elapsedUSBuffer;
     MidiSender* midiSender;
     // define the range of the sensors, with sensorFullyOn being the key fully depressed

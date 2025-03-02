@@ -225,7 +225,7 @@ void KeyHammer::printState () {
 void KeyHammer::printBuffers () {
     for (int i = 0; i < adcBuffer.size(); ++i) {
       Serial.printf("rawADC_%d:%d,", pitch, adcBuffer[i]);
-      Serial.printf("hammerPosition_%d:%d,", pitch, hammerPositionBuffer[i]);
+      Serial.printf("hammerPosition_%d:%f,", pitch, hammerPositionBuffer[i]);
       Serial.printf("elapsedUs_%d:%d,", pitch, elapsedUSBuffer[i]);
       Serial.printf("\n");
       Serial.flush();

@@ -49,6 +49,8 @@ KeyHammer::KeyHammer (int(*adcFnPtr)(void), MidiSender* midiSender, int pitch, c
   noteOn = false;
   keyArmed = true;
 
+  scaleFilterWeights(keyPosFilter);
+
   elapsedUS = 0;
 
   lastControlValue = 0;
@@ -73,7 +75,7 @@ void KeyHammer::updateKey () {
   lastKeyPosition = keyPosition;
   rawADC = getAdcValue();
   adcBuffer.push(rawADC);
-  keyPosition = rawADC;
+  keyPosition = applyFilter(adcBuffer, keyPosFilter);
   // constrain key position to be within the range determined by sensor max and min
   keyPosition = min(keyPosition, sensorMax);
   keyPosition = max(keyPosition, sensorMin);
@@ -81,7 +83,8 @@ void KeyHammer::updateKey () {
 }
 
 void KeyHammer::updateKeySpeed () {
-  keySpeed = (keyPosition - lastKeyPosition) / (float)elapsedUSBuffer.last();
+  keySpeed = applyFilter(adcBuffer, keySpeedFilter) / (float)elapsedUSBuffer.last();
+
 }
 
 void KeyHammer::updateHammer () {
@@ -204,6 +207,34 @@ void KeyHammer::generateVelocityMap () {
     logMultiplier = log(i / (float)velocityMapLength * (logBase - 1) + 1) / log(logBase);
     velocityMap[i] = round(127 * i / (float)velocityMapLength);
   }
+}
+
+template <size_t N>
+void KeyHammer::scaleFilterWeights(float (&filter)[N]) {
+    float sum = 0;
+    // size_t is an unsigned integer type, so use it for i also
+    // (but if i never negative, it would be fine anyway)
+    for (size_t i = 0; i < N; i++) {
+        sum += filter[i];
+    }
+    for (size_t i = 0; i < N; i++) {
+        filter[i] /= sum;
+    }
+}
+
+
+template <typename T, size_t bufferLength, size_t filterLength>
+float KeyHammer::applyFilter(CircularBuffer<T, bufferLength>& buffer, float (&filter)[filterLength]) {
+  float filteredValue = 0;
+  int bufferSize = buffer.size();
+  int startIndex = max(0, bufferSize - filterLength);
+  for (int i = 0; i < filterLength; i++) {
+      int bufferIndex = startIndex + i;
+      if (bufferIndex < bufferSize) {
+          filteredValue += buffer[bufferIndex] * filter[i];
+      }
+  }
+  return filteredValue;
 }
 
 void KeyHammer::printState () {

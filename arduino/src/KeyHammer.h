@@ -23,6 +23,7 @@ class KeyHammer
     CircularBuffer<int, BUFFER_SIZE> adcBuffer;
     CircularBuffer<float, BUFFER_SIZE> hammerPositionBuffer;
     CircularBuffer<int, BUFFER_SIZE> elapsedUSBuffer;
+    CircularBuffer<int, BUFFER_SIZE> iterationBuffer;
 
     // filters should be in dot product order, i.e. ordered like buffers, which is oldest to newest
     static const int posFilterLength = 18;
@@ -84,6 +85,9 @@ class KeyHammer
     int iteration = 0;
 
     bool bufferPrinted = false;
+    float lastNoteOnHammerSpeed;
+    int lastNoteOnVelocity = -1;
+    int noteCount = 0;
 
     // whether or not to print note on/offs
     PrintMode printMode;

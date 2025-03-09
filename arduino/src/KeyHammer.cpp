@@ -123,6 +123,9 @@ void KeyHammer::checkNoteOn () {
     // could be useful for understanding adc/key/hammer behaviour
     bufferPrinted = false;
     noteOnElapsedUS = 0;
+    lastNoteOnHammerSpeed = hammerSpeed;
+    lastNoteOnVelocity = velocityMap[velocityIndex];
+    noteCount++;
     hammerPosition = noteOnThreshold;
     hammerSpeed = -hammerSpeed;
     }
@@ -187,6 +190,7 @@ void KeyHammer::stepPedal () {
 }
 
 void KeyHammer::step () {
+  iterationBuffer.push(iteration);
   if (operationMode=='h')
   {
     stepHammer();
@@ -260,11 +264,34 @@ void KeyHammer::printState () {
 }
 
 void KeyHammer::printBuffers () {
-    for (int i = 0; i < adcBuffer.size(); ++i) {
-      Serial.printf("rawADC_%d:%d,", pitch, adcBuffer[i]);
-      Serial.printf("hammerPosition_%d:%f,", pitch, hammerPositionBuffer[i]);
-      Serial.printf("elapsedUs_%d:%d,", pitch, elapsedUSBuffer[i]);
+  int delayUS = 15;
+    for (int i = 0; i < (int)adcBuffer.size(); ++i) {
+      Serial.printf("pitch:%d,", pitch);
+      delayMicroseconds(delayUS);
+      Serial.flush();
+      Serial.printf("noteCount:%d,", noteCount);
+      delayMicroseconds(delayUS);
+      Serial.flush();
+      Serial.printf("noteOnHammerSpeed:%f,", lastNoteOnHammerSpeed);
+      delayMicroseconds(delayUS);
+      Serial.flush();
+      Serial.printf("noteOnVelocity:%d,", lastNoteOnVelocity);
+      delayMicroseconds(delayUS);
+      Serial.flush();
+      Serial.printf("rawADC:%d,", adcBuffer[i]);
+      delayMicroseconds(delayUS);
+      Serial.flush();
+      Serial.printf("hammerPosition:%f,", hammerPositionBuffer[i]);
+      delayMicroseconds(delayUS);
+      Serial.flush();
+      Serial.printf("elapsedUs:%d,", elapsedUSBuffer[i]);
+      delayMicroseconds(delayUS);
+      Serial.flush();
+      Serial.printf("iteration:%d,", iterationBuffer[i]);
+      delayMicroseconds(delayUS);
+      Serial.flush();
       Serial.printf("\n");
+      delayMicroseconds(delayUS);
       Serial.flush();
     }
 }

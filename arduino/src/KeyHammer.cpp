@@ -58,8 +58,6 @@ KeyHammer::KeyHammer (int(*adcFnPtr)(void), MidiSender* midiSender, int pitch, c
   // default to 64 (sustain); manually change if necessary
   controlNumber = 64;
 
-  printNotes=false;
-
   // initialize velocity map
   if (velocityMap[velocityMapLength-1] == 0) {
     generateVelocityMap();
@@ -118,12 +116,13 @@ void KeyHammer::checkNoteOn () {
     midiSender->sendNoteOn(pitch, velocityMap[velocityIndex], 2);
     noteOn = true;
     keyArmed = false;
-    if (printNotes){ //&& ((i == 0 && j == 0) || (i == 1 && j == 2))){
+    if (printMode == PRINT_NOTES){
       Serial.printf("\n note on: hammerSpeed %f, velocityIndex %d, velocity %d pitch %d \n", velocity, velocityIndex, velocityMap[velocityIndex], pitch);
     }
     // maybe print the buffer on note on?
     // could be useful for understanding adc/key/hammer behaviour
-    // printBuffers();
+    bufferPrinted = false;
+    noteOnElapsedUS = 0;
     hammerPosition = noteOnThreshold;
     hammerSpeed = -hammerSpeed;
     }
@@ -137,7 +136,7 @@ void KeyHammer::checkNoteOff () {
 
     if ((keyPosition > noteOffThreshold) == (sensorFullyOff > sensorFullyOn)) {
       midiSender->sendNoteOff(pitch, 64, 2);
-      if (printNotes){
+      if (printMode == PRINT_NOTES){
         Serial.printf("note off: noteOffThreshold %d, adcValue %d, velocity %d  pitch %d \n", noteOffThreshold, keyPosition, 64, pitch);
       }
       noteOn = false;
@@ -155,6 +154,10 @@ void KeyHammer::stepHammer () {
     // test();
     checkNoteOn();
     checkNoteOff();
+    if ((printMode == PRINT_BUFFER) && (noteOnElapsedUS > 10000) && (!bufferPrinted)) {
+      printBuffers();
+      bufferPrinted = true;
+    }
   }
   elapsedUS = 0;
 }

@@ -8,6 +8,12 @@
 #include <elapsedMillis.h>
 #include "MidiSender.h"
 
+enum PrintMode {
+  PRINT_NONE,
+  PRINT_NOTES,
+  PRINT_BUFFER
+};
+
 class KeyHammer
 {
     // a pointer to a function that will return the position of the key
@@ -77,8 +83,10 @@ class KeyHammer
     // track number of simulation iterations
     int iteration = 0;
 
+    bool bufferPrinted = false;
+
     // whether or not to print note on/offs
-    bool printNotes;
+    PrintMode printMode;
     
     // fn to scale the weights of a filter so they sum to 1
     template <size_t N>
@@ -116,4 +124,6 @@ class KeyHammer
     void printState();
 
     elapsedMicros elapsedUS;
+    // for keeping track of time since last note on
+    elapsedMicros noteOnElapsedUS;
 };

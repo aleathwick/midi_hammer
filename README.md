@@ -94,14 +94,21 @@ arduino-cli compile -b teensy:avr:teensy41:usb=serialmidi
 To view the FQBN used by the arduino IDE, set verbose to true and compile. This is where I found options specified in the FQBN like tinyusb in this: rp2040:rp2040:rpipico2:usbstack=tinyusb
 
 ### to do
-- Compare pico with ESP32 for speed.
-    - Still remains to do arduino on stm32.
-- Test simple averaging of multiple adc speeds to reduce hall sensor noise.
-- Calibration code
 - Arduino code:
-    - Key class shouldn't interact directly with midi device (fn pointer instead?); that needs to be segmented out.
+  - simulation:
+    - wait until key goes below certain speed before note on
+    - don't simulate hammer when key is not armed, and when armed again reset to key pos/speed
+    - refactor: simplify handling of sensorFullyOn < sensorFullyOff (flip signs, as in circuitpy code)
+    - specify min / max key speed in terms of mm/s key travel
     - fix for behaviour of gravity (speed update should be based on mean of last and current speeds)
-    - simplify handling of sensorFullyOn < sensorFullyOff (flip signs, as in circuitpy code)
+  - filtering
+    - share filter values between keys
+    - choose filter based on total elapsed time target? E.g. 3000us.
+  - interactive serial control
+  - calibration
+  - store params on SD card
+  - Simultaneous dual ADC read (teensy)
+  - pedal
     - sub class for pedal mode, rather than one class with different modes?
     - add binary version of pedal
 

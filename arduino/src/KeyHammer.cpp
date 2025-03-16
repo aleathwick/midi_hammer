@@ -153,9 +153,10 @@ void KeyHammer::stepHammer () {
   updateElapsed();
   updateKeySpeed();
   if (iteration > BUFFER_SIZE) {
-    updateHammer();
-    // test();
-    checkNoteOn();
+    if (keyArmed) {
+      updateHammer();
+      checkNoteOn();
+    }
     checkNoteOff();
     if ((printMode == PRINT_BUFFER) && (noteOnElapsedUS > 10000) && (!bufferPrinted)) {
       printBuffers();

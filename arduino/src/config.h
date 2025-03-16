@@ -4,3 +4,5 @@
 // either PICO, TEENSY
 // #define TEENSY
 #define PICO
+
+#define BUFFER_SIZE 30

@@ -49,14 +49,14 @@ KeyHammer::KeyHammer (int(*adcFnPtr)(void), MidiSender* midiSender, int pitch, c
   noteOn = false;
   keyArmed = true;
 
+  scaleFilterWeights(keyPosFilter);
+
   elapsedUS = 0;
 
   lastControlValue = 0;
   controlValue = 0;
   // default to 64 (sustain); manually change if necessary
   controlNumber = 64;
-
-  printNotes=false;
 
   // initialize velocity map
   if (velocityMap[velocityMapLength-1] == 0) {
@@ -65,10 +65,15 @@ KeyHammer::KeyHammer (int(*adcFnPtr)(void), MidiSender* midiSender, int pitch, c
 
 }
 
+void KeyHammer::updateElapsed () {
+  elapsedUSBuffer.push(elapsedUS);
+}
+
 void KeyHammer::updateKey () {
   lastKeyPosition = keyPosition;
   rawADC = getAdcValue();
-  keyPosition = rawADC;
+  adcBuffer.push(rawADC);
+  keyPosition = applyFilter(adcBuffer, keyPosFilter);
   // constrain key position to be within the range determined by sensor max and min
   keyPosition = min(keyPosition, sensorMax);
   keyPosition = max(keyPosition, sensorMin);
@@ -76,14 +81,15 @@ void KeyHammer::updateKey () {
 }
 
 void KeyHammer::updateKeySpeed () {
-  keySpeed = (keyPosition - lastKeyPosition) / (float)elapsedUS;
+  keySpeed = applyFilter(adcBuffer, keySpeedFilter) / (float)elapsedUSBuffer.last();
+
 }
 
 void KeyHammer::updateHammer () {
   // TODO: position should be updated using the mean of old and new speeds
   // see circuitpy code
-  hammerSpeed = hammerSpeed - gravity * elapsedUS;
-  hammerPosition = hammerPosition + hammerSpeed * elapsedUS;
+  hammerSpeed = hammerSpeed - gravity * elapsedUSBuffer.last();
+  hammerPosition = hammerPosition + hammerSpeed * elapsedUSBuffer.last();
   // check for interaction with key
   if ((hammerPosition > keyPosition) == (sensorFullyOff > sensorFullyOn)) {
           hammerPosition = keyPosition;
@@ -95,6 +101,7 @@ void KeyHammer::updateHammer () {
           // }
         // }
   }
+  hammerPositionBuffer.push(hammerPosition);
 }
 
 void KeyHammer::checkNoteOn () {
@@ -109,9 +116,16 @@ void KeyHammer::checkNoteOn () {
     midiSender->sendNoteOn(pitch, velocityMap[velocityIndex], 2);
     noteOn = true;
     keyArmed = false;
-    if (printNotes){ //&& ((i == 0 && j == 0) || (i == 1 && j == 2))){
+    if (printMode == PRINT_NOTES){
       Serial.printf("\n note on: hammerSpeed %f, velocityIndex %d, velocity %d pitch %d \n", velocity, velocityIndex, velocityMap[velocityIndex], pitch);
     }
+    // maybe print the buffer on note on?
+    // could be useful for understanding adc/key/hammer behaviour
+    bufferPrinted = false;
+    noteOnElapsedUS = 0;
+    lastNoteOnHammerSpeed = hammerSpeed;
+    lastNoteOnVelocity = velocityMap[velocityIndex];
+    noteCount++;
     hammerPosition = noteOnThreshold;
     hammerSpeed = -hammerSpeed;
     }
@@ -125,7 +139,7 @@ void KeyHammer::checkNoteOff () {
 
     if ((keyPosition > noteOffThreshold) == (sensorFullyOff > sensorFullyOn)) {
       midiSender->sendNoteOff(pitch, 64, 2);
-      if (printNotes){
+      if (printMode == PRINT_NOTES){
         Serial.printf("note off: noteOffThreshold %d, adcValue %d, velocity %d  pitch %d \n", noteOffThreshold, keyPosition, 64, pitch);
       }
       noteOn = false;
@@ -135,17 +149,26 @@ void KeyHammer::checkNoteOff () {
 
 void KeyHammer::stepHammer () {
   updateKey();
+  // call updateElapsed after updateKey because reading the ADC value is the slowest part of the loop
+  updateElapsed();
   updateKeySpeed();
-  updateHammer();
-  // test();
-  checkNoteOn();
-  checkNoteOff();
+  if (iteration > BUFFER_SIZE) {
+    updateHammer();
+    // test();
+    checkNoteOn();
+    checkNoteOff();
+    if ((printMode == PRINT_BUFFER) && (noteOnElapsedUS > 10000) && (!bufferPrinted)) {
+      printBuffers();
+      bufferPrinted = true;
+    }
+  }
   elapsedUS = 0;
 }
 
 
 void KeyHammer::stepPedal () {
   updateKey();
+  updateElapsed();
   lastControlValue = controlValue;
   // this could be sped up by precomputing the possible values
   controlValue = (int)((keyPosition - sensorFullyOff) / float(sensorFullyOn - sensorFullyOff) * 127);
@@ -167,6 +190,7 @@ void KeyHammer::stepPedal () {
 }
 
 void KeyHammer::step () {
+  iterationBuffer.push(iteration);
   if (operationMode=='h')
   {
     stepHammer();
@@ -174,6 +198,7 @@ void KeyHammer::step () {
   {
     stepPedal();
   }
+  iteration++;
 }
 
 void KeyHammer::test () {
@@ -194,18 +219,79 @@ void KeyHammer::generateVelocityMap () {
   }
 }
 
+template <size_t N>
+void KeyHammer::scaleFilterWeights(float (&filter)[N]) {
+    float sum = 0;
+    // size_t is an unsigned integer type, so use it for i also
+    // (but if i never negative, it would be fine anyway)
+    for (size_t i = 0; i < N; i++) {
+        sum += filter[i];
+    }
+    for (size_t i = 0; i < N; i++) {
+        filter[i] /= sum;
+    }
+}
+
+
+template <typename T, size_t bufferLength, size_t filterLength>
+float KeyHammer::applyFilter(CircularBuffer<T, bufferLength>& buffer, float (&filter)[filterLength]) {
+  float filteredValue = 0;
+  int bufferSize = buffer.size();
+  int startIndex = max(0, bufferSize - filterLength);
+  for (int i = 0; i < filterLength; i++) {
+      int bufferIndex = startIndex + i;
+      if (bufferIndex < bufferSize) {
+          filteredValue += buffer[bufferIndex] * filter[i];
+      }
+  }
+  return filteredValue;
+}
+
 void KeyHammer::printState () {
   if (operationMode=='p'){
     Serial.printf("key_%d:%f,", pitch, keyPosition);
     Serial.printf("rawADC_%d:%d,", pitch, rawADC);
-    Serial.printf("elapsedUS_%d:%d,", pitch, (int)elapsedUS);
-    Serial.printf("controlValue_%d:%d,", controlValue, (int)elapsedUS);
+    Serial.printf("elapsedUS_%d:%d,", pitch, elapsedUSBuffer.last());
+    Serial.printf("controlValue_%d:%d,", pitch, controlValue);
   } else if (operationMode=='h'){
     // Serial.printf("%d %f %f ", keyPosition, keySpeed, hammerSpeed);
     Serial.printf("hammer_%d:%f,", pitch, hammerPosition);
     Serial.printf("rawADC_%d:%d,", pitch, rawADC);
     Serial.printf("hammerSpeed_%d:%f,", pitch, hammerSpeed);
-    // Serial.printf("elapsedUS_%d:%d,", pitch, (int)elapsedUS);
+    Serial.printf("elapsedUS_%d:%d,", pitch, elapsedUSBuffer.last());
   }
 
+}
+
+void KeyHammer::printBuffers () {
+  int delayUS = 15;
+    for (int i = 0; i < (int)adcBuffer.size(); ++i) {
+      Serial.printf("pitch:%d,", pitch);
+      delayMicroseconds(delayUS);
+      Serial.flush();
+      Serial.printf("noteCount:%d,", noteCount);
+      delayMicroseconds(delayUS);
+      Serial.flush();
+      Serial.printf("noteOnHammerSpeed:%f,", lastNoteOnHammerSpeed);
+      delayMicroseconds(delayUS);
+      Serial.flush();
+      Serial.printf("noteOnVelocity:%d,", lastNoteOnVelocity);
+      delayMicroseconds(delayUS);
+      Serial.flush();
+      Serial.printf("rawADC:%d,", adcBuffer[i]);
+      delayMicroseconds(delayUS);
+      Serial.flush();
+      Serial.printf("hammerPosition:%f,", hammerPositionBuffer[i]);
+      delayMicroseconds(delayUS);
+      Serial.flush();
+      Serial.printf("elapsedUs:%d,", elapsedUSBuffer[i]);
+      delayMicroseconds(delayUS);
+      Serial.flush();
+      Serial.printf("iteration:%d,", iterationBuffer[i]);
+      delayMicroseconds(delayUS);
+      Serial.flush();
+      Serial.printf("\n");
+      delayMicroseconds(delayUS);
+      Serial.flush();
+    }
 }

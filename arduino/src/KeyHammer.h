@@ -4,14 +4,41 @@
 
 #pragma once
 #include "config.h"
+#include <CircularBuffer.hpp>
 #include <elapsedMillis.h>
 #include "MidiSender.h"
+
+enum PrintMode {
+  PRINT_NONE,
+  PRINT_NOTES,
+  PRINT_BUFFER
+};
 
 class KeyHammer
 {
     // a pointer to a function that will return the position of the key
     // see here: https://forum.arduino.cc/t/function-as-a-parameter-in-class-object-function-pointer-in-library/461967/7
     int(*adcFnPtr)(void);
+    // a circular buffer to store the last n adc values
+    CircularBuffer<int, BUFFER_SIZE> adcBuffer;
+    CircularBuffer<float, BUFFER_SIZE> hammerPositionBuffer;
+    CircularBuffer<int, BUFFER_SIZE> elapsedUSBuffer;
+    CircularBuffer<int, BUFFER_SIZE> iterationBuffer;
+
+    // filters should be in dot product order, i.e. ordered like buffers, which is oldest to newest
+    static const int posFilterLength = 18;
+    float keyPosFilter[posFilterLength] = {
+      -0.09356725, -0.07602339, -0.05847953, -0.04093567, -0.02339181,
+      -0.00584795,  0.01169591,  0.02923977,  0.04678363,  0.06432749,
+       0.08187135,  0.0994152 ,  0.11695906,  0.13450292,  0.15204678,
+       0.16959064,  0.1871345 ,  0.20467836};
+    static const int speedFilterLength = 18;
+    float keySpeedFilter[speedFilterLength] = {
+      -0.01754386, -0.01547988, -0.01341589, -0.01135191, -0.00928793,
+      -0.00722394, -0.00515996, -0.00309598, -0.00103199,  0.00103199,
+       0.00309598,  0.00515996,  0.00722394,  0.00928793,  0.01135191,
+       0.01341589,  0.01547988,  0.01754386};
+
     MidiSender* midiSender;
     // define the range of the sensors, with sensorFullyOn being the key fully depressed
   // this will work regardless of sensorFullyOn < sensorFullyOff or sensorFullyOff < sensorFullyOn
@@ -29,7 +56,7 @@ class KeyHammer
     int pitch;
     
     int rawADC;
-    int keyPosition;
+    float keyPosition;
     int lastKeyPosition;
     // key and hammer speeds are measured in adc bits per microsecond
     float keySpeed;
@@ -54,11 +81,25 @@ class KeyHammer
     // parameters for pedal mode
     int lastControlValue;
     int controlValue;
+    // track number of simulation iterations
+    int iteration = 0;
+
+    bool bufferPrinted = false;
+    float lastNoteOnHammerSpeed;
+    int lastNoteOnVelocity = -1;
+    int noteCount = 0;
 
     // whether or not to print note on/offs
-    bool printNotes;
+    PrintMode printMode;
+    
+    // fn to scale the weights of a filter so they sum to 1
+    template <size_t N>
+    void scaleFilterWeights(float (&filter)[N]);
+    // fn to apply a filter to the most recent samples in a circular buffer
+    template <typename T, size_t bufferLength, size_t filterLength>
+    float KeyHammer::applyFilter(CircularBuffer<T, bufferLength>& buffer, float (&filter)[filterLength]);
 
-
+    void updateElapsed();
     void updateKey();
     void updateKeySpeed();
     void updateHammer();
@@ -68,6 +109,7 @@ class KeyHammer
     void stepHammer();
     void stepKey();
     void stepPedal();
+    void printBuffers();
 
   public:
     KeyHammer(int(*adcFnPtr)(void), MidiSender* midiSender,int pitch, char operationMode, int sensorFullyOn, int sensorFullyOff, float hammer_travel, int minPressUS);
@@ -86,4 +128,6 @@ class KeyHammer
     void printState();
 
     elapsedMicros elapsedUS;
+    // for keeping track of time since last note on
+    elapsedMicros noteOnElapsedUS;
 };

@@ -132,6 +132,9 @@ void KeyHammer::checkNoteOff () {
   if (noteOn){
     if ((! keyArmed) && ((keyPosition > keyResetThreshold) == (sensorFullyOff > sensorFullyOn))) {
       keyArmed = true;
+      // reset hammer position / speed when key is re-armed
+      hammerPosition = keyPosition;
+      hammerSpeed = keySpeed;
     }
 
     if ((keyPosition > noteOffThreshold) == (sensorFullyOff > sensorFullyOn)) {

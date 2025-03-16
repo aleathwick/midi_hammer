@@ -69,6 +69,8 @@ arduino-cli lib install "MIDI Library"
 # https://github.com/pfeerick/elapsedMillis/wiki
 # by Paul Stoffregen
 arduino-cli lib install "elapsedMillis"
+# https://github.com/rlogiacco/CircularBuffer
+arduino-cli lib install "CircularBuffer"
 ```
 
 #### Compilation
@@ -91,7 +93,21 @@ Compiling for teensy 4.1:
 arduino-cli compile -b teensy:avr:teensy41:usb=serialmidi
 ```
 
+Create aliases for the above commands:
+```sh
+echo alias compile_pico=\"arduino-cli compile -b rp2040:rp2040:rpipico:usbstack=tinyusb --library ../src\" >> ~/.bashrc
+echo alias compile_picow=\'arduino-cli compile -b rp2040:rp2040:rpipicow:usbstack=tinyusb --library ../src\" >> ~/.bashrc
+echo alias compile_pico2=\"arduino-cli compile -b rp2040:rp2040:rpipico2:usbstack=tinyusb --library ../src\" >> ~/.bashrc
+echo alias compile_teensy=\"arduino-cli compile -b teensy:avr:teensy41:usb=serialmidi --library ../src\" >> ~/.bashrc
+```
+
 To view the FQBN used by the arduino IDE, set verbose to true and compile. This is where I found options specified in the FQBN like tinyusb in this: rp2040:rp2040:rpipico2:usbstack=tinyusb
+
+#### Updating libraries
+```sh
+arduino-cli lib upgrade
+arduino-cli core upgrade
+```
 
 ### to do
 - Arduino code:

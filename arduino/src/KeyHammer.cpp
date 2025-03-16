@@ -74,9 +74,6 @@ void KeyHammer::updateKey () {
   rawADC = getAdcValue();
   adcBuffer.push(rawADC);
   keyPosition = applyFilter(adcBuffer, keyPosFilter);
-  // constrain key position to be within the range determined by sensor max and min
-  keyPosition = min(keyPosition, sensorMax);
-  keyPosition = max(keyPosition, sensorMin);
 
 }
 

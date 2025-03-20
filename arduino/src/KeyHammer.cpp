@@ -111,7 +111,7 @@ void KeyHammer::updateHammer () {
 
 void KeyHammer::checkNoteOn () {
   // check for note ons
-  if (keyArmed && (hammerPosition > noteOnThreshold)) {
+  if (keyArmed && (hammerPosition > noteOnThreshold) && (keySpeed > 0)) {
     // do something with hammer speed to get velocity
     velocity = hammerSpeed;
     velocityIndex = round(hammerSpeed * hammerSpeedScaler);

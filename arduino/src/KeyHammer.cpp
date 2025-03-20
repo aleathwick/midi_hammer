@@ -23,6 +23,14 @@ KeyHammer::KeyHammer (int(*adcFnPtr)(void), MidiSender* midiSender, int pitch, c
   sensorMax = max(sensorFullyOn, sensorFullyOff);
   sensorMin = min(sensorFullyOn, sensorFullyOff);
 
+  // assume ADC values increase as the key is pressed
+  // i.e. sensorFullyOn > sensorFullyOff
+  // if this is not the case, flip the values
+  if (sensorFullyOn < sensorFullyOff) {
+    sensorFullyOn = -sensorFullyOn;
+    sensorFullyOff = -sensorFullyOff;
+  }
+
   noteOnThreshold = sensorFullyOn + 0.06 * (sensorFullyOn - sensorFullyOff);
   noteOffThreshold = sensorFullyOn - 0.5 * (sensorFullyOn - sensorFullyOff);
   keyResetThreshold = sensorFullyOn - 0.25 * (sensorFullyOn - sensorFullyOff);
@@ -43,7 +51,7 @@ KeyHammer::KeyHammer (int(*adcFnPtr)(void), MidiSender* midiSender, int pitch, c
   hammerPosition = sensorFullyOff;
   hammerSpeed = 0.0;
   // max hammer speed measured in adc bits per microseconds
-  float maxHammerSpeed = (max(sensorFullyOn, sensorFullyOff) - min(sensorFullyOn, sensorFullyOff)) / (float)minPressUS;
+  float maxHammerSpeed = (sensorFullyOn - sensorFullyOff) / (float)minPressUS;
   hammerSpeedScaler = velocityMapLength / maxHammerSpeed;
 
   noteOn = false;
@@ -74,9 +82,6 @@ void KeyHammer::updateKey () {
   rawADC = getAdcValue();
   adcBuffer.push(rawADC);
   keyPosition = applyFilter(adcBuffer, keyPosFilter);
-  // constrain key position to be within the range determined by sensor max and min
-  keyPosition = min(keyPosition, sensorMax);
-  keyPosition = max(keyPosition, sensorMin);
 
 }
 
@@ -91,7 +96,7 @@ void KeyHammer::updateHammer () {
   hammerSpeed = hammerSpeed - gravity * elapsedUSBuffer.last();
   hammerPosition = hammerPosition + hammerSpeed * elapsedUSBuffer.last();
   // check for interaction with key
-  if ((hammerPosition > keyPosition) == (sensorFullyOff > sensorFullyOn)) {
+  if (hammerPosition < keyPosition) {
           hammerPosition = keyPosition;
           // we could check to see if the hammer speed is greater then key speed, but probably not necessary
           // after all, the key as 'caught up' to the hammer
@@ -106,7 +111,7 @@ void KeyHammer::updateHammer () {
 
 void KeyHammer::checkNoteOn () {
   // check for note ons
-  if (keyArmed && (hammerPosition < noteOnThreshold) == (sensorFullyOff > sensorFullyOn)) {
+  if (keyArmed && (hammerPosition > noteOnThreshold) && (keySpeed > 0)) {
     // do something with hammer speed to get velocity
     velocity = hammerSpeed;
     velocityIndex = round(hammerSpeed * hammerSpeedScaler);
@@ -133,11 +138,14 @@ void KeyHammer::checkNoteOn () {
 
 void KeyHammer::checkNoteOff () {
   if (noteOn){
-    if ((! keyArmed) && ((keyPosition > keyResetThreshold) == (sensorFullyOff > sensorFullyOn))) {
+    if ((! keyArmed) && (keyPosition < keyResetThreshold)) {
       keyArmed = true;
+      // reset hammer position / speed when key is re-armed
+      hammerPosition = keyPosition;
+      hammerSpeed = keySpeed;
     }
 
-    if ((keyPosition > noteOffThreshold) == (sensorFullyOff > sensorFullyOn)) {
+    if (keyPosition < noteOffThreshold) {
       midiSender->sendNoteOff(pitch, 64, 2);
       if (printMode == PRINT_NOTES){
         Serial.printf("note off: noteOffThreshold %d, adcValue %d, velocity %d  pitch %d \n", noteOffThreshold, keyPosition, 64, pitch);
@@ -153,9 +161,10 @@ void KeyHammer::stepHammer () {
   updateElapsed();
   updateKeySpeed();
   if (iteration > BUFFER_SIZE) {
-    updateHammer();
-    // test();
-    checkNoteOn();
+    if (keyArmed) {
+      updateHammer();
+      checkNoteOn();
+    }
     checkNoteOff();
     if ((printMode == PRINT_BUFFER) && (noteOnElapsedUS > 10000) && (!bufferPrinted)) {
       printBuffers();
@@ -206,6 +215,9 @@ void KeyHammer::test () {
 }
 
 int KeyHammer::getAdcValue () {
+  if (sensorFullyOff < 0) {
+    return -adcFnPtr();
+  }
   return adcFnPtr();
 }
 

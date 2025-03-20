@@ -112,11 +112,9 @@ arduino-cli core upgrade
 ### to do
 - Arduino code:
   - simulation:
-    - wait until key goes below certain speed before note on
-    - don't simulate hammer when key is not armed, and when armed again reset to key pos/speed
-    - refactor: simplify handling of sensorFullyOn < sensorFullyOff (flip signs, as in circuitpy code)
     - specify min / max key speed in terms of mm/s key travel
     - fix for behaviour of gravity (speed update should be based on mean of last and current speeds)
+    - perhaps switch to key speed method for velocity generation (mean key speed since key was moving above a minimum speed)
   - filtering
     - share filter values between keys
     - choose filter based on total elapsed time target? E.g. 3000us.

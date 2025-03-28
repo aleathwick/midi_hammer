@@ -37,11 +37,14 @@ To do:
   const int addressPins[] = {18, 17, 16};
   const int enablePins[] = {20};
   int signalPins[] = {19, 27}; // A1 / GP27
+  int calibrationPin = 0;
 
 #elif defined(TEENSY)
   const int addressPins[] = {35, 34, 33};
   const int enablePins[] = {39};
   int signalPins[] = {40, 15}; // A1
+  int calibrationPin = 14;
+  
   ADC *adc = new ADC(); // adc object;
 
   #endif
@@ -122,6 +125,8 @@ void decrementPrintKey () {
   }
 }
 
+Bounce2::Button b_toggle_calibration = Bounce2::Button();
+
 
 void setup() {
   Serial.begin(57600);
@@ -130,6 +135,10 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(1), incrementPrintKey, CHANGE);
   pinMode(2, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(2), decrementPrintKey, CHANGE);
+
+  b_toggle_calibration.attach( calibrationPin, INPUT_PULLUP );
+  b_toggle_calibration.interval(5);
+  b_toggle_calibration.setPressedState(LOW); 
 
   midiSender.initialize();
 
@@ -167,6 +176,15 @@ void loop() {
       printInfo = false;
       printTimerMS = 0;
     }
+
+    b_toggle_calibration.update();
+
+  if ( b_toggle_calibration.pressed() ) {
+    // Serial.println("Calibrating");
+    for (int i = 0; i < n_keys; i++) {
+      keys[i].toggleCalibration();
+    }
+  }
     
     loopTimerUS = 0;
     // do any loop end actions, such as reading any new MIDI messages

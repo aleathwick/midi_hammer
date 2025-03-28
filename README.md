@@ -71,6 +71,8 @@ arduino-cli lib install "MIDI Library"
 arduino-cli lib install "elapsedMillis"
 # https://github.com/rlogiacco/CircularBuffer
 arduino-cli lib install "CircularBuffer"
+# https://github.com/akkoyun/Statistical
+arduino-cli lib install "Statistical"
 ```
 
 #### Compilation

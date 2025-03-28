@@ -17,42 +17,15 @@ int velocityMap[velocityMapLength];
 // use a constructor initializer list for adc, otherwise the reference won't work
 KeyHammer::KeyHammer (int(*adcFnPtr)(void), MidiSender* midiSender, int pitch, char operationMode='h', int sensorFullyOn=430, int sensorFullyOff=50, float hammer_travel=4.5, int minPressUS=8500)
   : adcFnPtr(adcFnPtr), midiSender(midiSender), pitch(pitch), operationMode(operationMode), sensorFullyOn(sensorFullyOn), sensorFullyOff(sensorFullyOff), hammer_travel(hammer_travel), minPressUS(minPressUS) {
-  // TODO: there is a simpler way of doing this; see circuitpython code
-  // instead of modifying if statements all throughout code, flip the sign on max/min vals and
-  // on adc function
-  sensorMax = max(sensorFullyOn, sensorFullyOff);
-  sensorMin = min(sensorFullyOn, sensorFullyOff);
-
-  // assume ADC values increase as the key is pressed
-  // i.e. sensorFullyOn > sensorFullyOff
-  // if this is not the case, flip the values
-  if (sensorFullyOn < sensorFullyOff) {
-    sensorFullyOn = -sensorFullyOn;
-    sensorFullyOff = -sensorFullyOff;
-  }
-
-  noteOnThreshold = sensorFullyOn + 0.06 * (sensorFullyOn - sensorFullyOff);
-  noteOffThreshold = sensorFullyOn - 0.5 * (sensorFullyOn - sensorFullyOff);
-  keyResetThreshold = sensorFullyOn - 0.25 * (sensorFullyOn - sensorFullyOff);
-
-  // gravity calculation
-  // gravity in metres per microsecond^2
-  float gravity_m = 9.81e-12;
-  // gravity in mm per microsecond^2
-  float gravity_mm = gravity_m * 1000;
-  // gravity in adc bits per microsecond^2
-  // hammer travel is in mm
-  gravity = gravity_mm  / hammer_travel * (sensorFullyOn - sensorFullyOff);
-
+  
+  updateADCParams();
+  
   keyPosition = sensorFullyOff;
   lastKeyPosition = sensorFullyOff;
   rawADC = sensorFullyOff;
   keySpeed = 0.0;
   hammerPosition = sensorFullyOff;
   hammerSpeed = 0.0;
-  // max hammer speed measured in adc bits per microseconds
-  float maxHammerSpeed = (sensorFullyOn - sensorFullyOff) / (float)minPressUS;
-  hammerSpeedScaler = velocityMapLength / maxHammerSpeed;
 
   noteOn = false;
   keyArmed = true;
@@ -72,6 +45,97 @@ KeyHammer::KeyHammer (int(*adcFnPtr)(void), MidiSender* midiSender, int pitch, c
   }
 
 }
+
+void KeyHammer::updateADCParams () {
+  // assume ADC values increase as the key is pressed
+  // i.e. sensorFullyOn > sensorFullyOff
+  // if this is not the case, flip the values
+  if (sensorFullyOn < sensorFullyOff) {
+    sensorFullyOn = -sensorFullyOn;
+    sensorFullyOff = -sensorFullyOff;
+  }
+  
+  // update thresholds
+  noteOnThreshold = sensorFullyOn + 0.06 * (sensorFullyOn - sensorFullyOff);
+  noteOffThreshold = sensorFullyOn - 0.5 * (sensorFullyOn - sensorFullyOff);
+  keyResetThreshold = sensorFullyOn - 0.5 * (sensorFullyOn - sensorFullyOff);
+
+  // gravity calculation
+  // gravity in metres per microsecond^2
+  float gravity_m = 9.81e-12;
+  // gravity in mm per microsecond^2
+  float gravity_mm = gravity_m * 1000;
+  // gravity in adc bits per microsecond^2
+  // hammer travel is in mm
+  gravity = gravity_mm  / hammer_travel * (sensorFullyOn - sensorFullyOff);
+
+  // max hammer speed measured in adc bits per microseconds
+  float maxHammerSpeed = (sensorFullyOn - sensorFullyOff) / (float)minPressUS;
+  hammerSpeedScaler = velocityMapLength / maxHammerSpeed;
+}
+
+
+void KeyHammer::toggleCalibration () {
+  if (! calibrating) {
+    c_mode = UP;
+    calibrating = true;
+    c_elapsedMS = 0;
+    c_sample_t = 0;
+  }
+  else {
+    calibrating = false;
+    c_elapsedMS = 0;
+    // add samples to stats object
+    Array_Stats<float> downStats(c_reservoir, min(c_sample_t, c_sample_n));
+    //  in later versions of Statistical, this is median()
+    c_down_sample_med = downStats.Quartile(2);
+    c_down_sample_std = downStats.Standard_Deviation();
+    if (abs(c_up_sample_med - c_down_sample_med) > (50 * c_up_sample_std)) {
+      sensorFullyOn = c_down_sample_med;
+      sensorFullyOff = c_up_sample_med;
+    } else {
+      sensorFullyOff = c_up_sample_med;
+    }
+  updateADCParams();
+}
+}
+
+void KeyHammer::calibrationSample () {
+  if (c_sample_t < c_sample_n) {
+    c_reservoir[c_sample_t] = rawADC;
+  } else {
+    int m = random(0, c_sample_t + 1);
+    if (m < c_sample_n) {
+      c_reservoir[m] = rawADC;      
+    }
+  }
+  c_sample_t += 1;
+}
+
+void KeyHammer::stepCalibration () {
+  updateKey();
+  updateElapsed();
+  if (c_mode == UP) {
+    calibrationSample();
+    if (c_elapsedMS > 1000) {
+      // use Array_Stats to calculate statistics
+      Array_Stats<float> upStats(c_reservoir, min(c_sample_t, c_sample_n));
+      //  in later versions of Statistical, this is median()
+      c_up_sample_med = upStats.Quartile(2);
+      c_up_sample_std = upStats.Standard_Deviation();
+      c_mode = DOWN;
+      c_sample_t = 0;
+    }
+  } else if (
+            (rawADC > (c_up_sample_med + 3 * c_up_sample_std))
+            or (rawADC < (c_up_sample_med - 3 * c_up_sample_std))
+          ) {
+    calibrationSample();
+  }
+  elapsedUS = 0;
+}
+
+
 
 void KeyHammer::updateElapsed () {
   elapsedUSBuffer.push(elapsedUS);
@@ -200,7 +264,9 @@ void KeyHammer::stepPedal () {
 
 void KeyHammer::step () {
   iterationBuffer.push(iteration);
-  if (operationMode=='h')
+  if (calibrating) {
+    stepCalibration();
+  } else if (operationMode=='h')
   {
     stepHammer();
   } else if (operationMode=='p')

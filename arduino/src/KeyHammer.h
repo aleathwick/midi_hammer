@@ -7,11 +7,17 @@
 #include <CircularBuffer.hpp>
 #include <elapsedMillis.h>
 #include "MidiSender.h"
+#include "Statistical.h"
 
 enum PrintMode {
   PRINT_NONE,
   PRINT_NOTES,
   PRINT_BUFFER
+};
+
+enum CalibMode {
+  UP,
+  DOWN
 };
 
 class KeyHammer
@@ -99,6 +105,22 @@ class KeyHammer
     template <typename T, size_t bufferLength, size_t filterLength>
     float KeyHammer::applyFilter(CircularBuffer<T, bufferLength>& buffer, float (&filter)[filterLength]);
 
+    // calibration related
+    int c_sample_n = 100;
+    float c_reservoir[100];
+    int c_sample_t;
+    bool calibrating = false;
+    CalibMode c_mode;
+    int c_start;
+    int c_up_sample_med;
+    float c_up_sample_std;
+    int c_down_sample_med;
+    float c_down_sample_std;
+
+    elapsedMillis c_elapsedMS;
+    void stepCalibration();
+    void calibrationSample();
+    void updateADCParams();
     void updateElapsed();
     void updateKey();
     void updateKeySpeed();
@@ -126,6 +148,7 @@ class KeyHammer
     void generateVelocityMap();
     int controlNumber;
     void printState();
+    void toggleCalibration();
 
     elapsedMicros elapsedUS;
     // for keeping track of time since last note on

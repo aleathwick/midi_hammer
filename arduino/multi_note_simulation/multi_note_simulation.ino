@@ -156,6 +156,13 @@ void setup() {
 
 // }
 
+// function for toggling calibration for all keys
+void toggleCalibration () {
+  for (int i = 0; i < n_keys; i++) {
+    keys[i].toggleCalibration();
+  }
+}
+
 void loop() {
   if (printTimerMS > 100) {
     printInfo = true;
@@ -180,10 +187,7 @@ void loop() {
     b_toggle_calibration.update();
 
   if ( b_toggle_calibration.pressed() ) {
-    // Serial.println("Calibrating");
-    for (int i = 0; i < n_keys; i++) {
-      keys[i].toggleCalibration();
-    }
+    toggleCalibration();
   }
     
     loopTimerUS = 0;

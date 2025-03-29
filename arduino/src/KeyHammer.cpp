@@ -266,13 +266,11 @@ void KeyHammer::stepPedal () {
 
 void KeyHammer::step () {
   iterationBuffer.push(iteration);
-  if (operationMode=='h')
+  if (calibrating) {
+    stepCalibration();
+  } else if (operationMode=='h')
   {
-    if (calibrating) {
-      stepCalibration();
-    } else {
-      stepHammer();
-    }
+    stepHammer();
   } else if (operationMode=='p')
   {
     stepPedal();

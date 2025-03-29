@@ -14,6 +14,11 @@ enum PrintMode {
   PRINT_BUFFER
 };
 
+enum CalibMode {
+  UP,
+  DOWN
+};
+
 class KeyHammer
 {
     // a pointer to a function that will return the position of the key
@@ -99,7 +104,21 @@ class KeyHammer
     template <typename T, size_t bufferLength, size_t filterLength>
     float KeyHammer::applyFilter(CircularBuffer<T, bufferLength>& buffer, float (&filter)[filterLength]);
 
+    // calibration related
+    int c_sample_n = 100;
+    float c_reservoir[100];
+    int c_sample_t;
+    bool calibrating = false;
+    CalibMode c_mode;
+    int c_start;
+    statistic::Statistic<float, uint32_t, true> upStats;
+    statistic::Statistic<float, uint32_t, true> downStats;
+    int c_up_sample_med;
+    float c_up_sample_std;
 
+    elapsedMillis c_elapsedMS;
+    void stepCalibration();
+    void calibrationSample();
     void updateADCParams();
     void updateElapsed();
     void updateKey();
@@ -128,6 +147,7 @@ class KeyHammer
     void generateVelocityMap();
     int controlNumber;
     void printState();
+    void toggleCalibration();
 
     elapsedMicros elapsedUS;
     // for keeping track of time since last note on

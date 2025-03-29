@@ -35,14 +35,16 @@ To do:
 //// c4051 setup
 #ifdef PICO
   const int addressPins[] = {18, 17, 16};
-  const int enablePins[] = {20, 19};
-  int signalPin = 27; // A1 / GP27
+  const int enablePins[] = {20};
+  int signalPins[] = {19, 27}; // A1 / GP27
 
 #elif defined(TEENSY)
   const int addressPins[] = {35, 34, 33};
-  const int enablePins[] = {39, 40};
-  int signalPin = 15; // A1
-#endif
+  const int enablePins[] = {39};
+  int signalPins[] = {40, 15}; // A1
+  ADC *adc = new ADC(); // adc object;
+
+  #endif
 
 int nEnable = sizeof(enablePins) / sizeof(enablePins[0]);
 

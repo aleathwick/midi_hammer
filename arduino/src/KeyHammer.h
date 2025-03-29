@@ -99,6 +99,8 @@ class KeyHammer
     template <typename T, size_t bufferLength, size_t filterLength>
     float KeyHammer::applyFilter(CircularBuffer<T, bufferLength>& buffer, float (&filter)[filterLength]);
 
+
+    void updateADCParams();
     void updateElapsed();
     void updateKey();
     void updateKeySpeed();

@@ -7,6 +7,7 @@
 #include <CircularBuffer.hpp>
 #include <elapsedMillis.h>
 #include "MidiSender.h"
+#include "Statistical.h"
 
 enum PrintMode {
   PRINT_NONE,
@@ -111,10 +112,10 @@ class KeyHammer
     bool calibrating = false;
     CalibMode c_mode;
     int c_start;
-    statistic::Statistic<float, uint32_t, true> upStats;
-    statistic::Statistic<float, uint32_t, true> downStats;
     int c_up_sample_med;
     float c_up_sample_std;
+    int c_down_sample_med;
+    float c_down_sample_std;
 
     elapsedMillis c_elapsedMS;
     void stepCalibration();

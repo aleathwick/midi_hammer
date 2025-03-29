@@ -81,18 +81,17 @@ void KeyHammer::toggleCalibration () {
     calibrating = true;
     c_elapsedMS = 0;
     c_sample_t = 0;
-    upStats.clear();
-    downStats.clear();
   }
   else {
     calibrating = false;
     c_elapsedMS = 0;
-    // add samples to down stats object
-    for (int i = 0; i < min(c_sample_t, c_sample_n); i++) {
-      downStats.add(c_reservoir[i]);
-    }
-    if (abs(c_up_sample_med - downStats.average()) > (50 * c_up_sample_std)) {
-      sensorFullyOn = downStats.average();
+    // add samples to stats object
+    Array_Stats<float> downStats(c_reservoir, min(c_sample_t, c_sample_n));
+    //  in later versions of Statistical, this is median()
+    c_down_sample_med = downStats.Quartile(2);
+    c_down_sample_std = downStats.Standard_Deviation();
+    if (abs(c_up_sample_med - c_down_sample_med) > (50 * c_up_sample_std)) {
+      sensorFullyOn = c_down_sample_med;
       sensorFullyOff = c_up_sample_med;
     } else {
       sensorFullyOff = c_up_sample_med;
@@ -119,12 +118,11 @@ void KeyHammer::stepCalibration () {
   if (c_mode == UP) {
     calibrationSample();
     if (c_elapsedMS > 1000) {
-      // add samples to stats object
-      for (int i = 0; i < min(c_sample_t, c_sample_n); i++) {
-        upStats.add(c_reservoir[i]);
-      }
-      c_up_sample_med = upStats.average();
-      c_up_sample_std = upStats.pop_stdev();
+      // use Array_Stats to calculate statistics
+      Array_Stats<float> upStats(c_reservoir, min(c_sample_t, c_sample_n));
+      //  in later versions of Statistical, this is median()
+      c_up_sample_med = upStats.Quartile(2);
+      c_up_sample_std = upStats.Standard_Deviation();
       c_mode = DOWN;
       c_sample_t = 0;
     }

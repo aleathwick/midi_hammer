@@ -73,6 +73,11 @@ arduino-cli lib install "elapsedMillis"
 arduino-cli lib install "CircularBuffer"
 # https://github.com/akkoyun/Statistical
 arduino-cli lib install "Statistical"
+# https://github.com/thomasfredericks/Bounce2
+arduino-cli lib install "Bounce2"
+# https://github.com/kroimon/Arduino-SerialCommand/tree/master
+arduino-cli config set library.enable_unsafe_install true
+arduino-cli lib install --git-url https://github.com/kroimon/Arduino-SerialCommand.git
 ```
 
 #### Compilation

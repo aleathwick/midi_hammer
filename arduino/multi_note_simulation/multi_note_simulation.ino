@@ -15,7 +15,7 @@ To do:
 
 // elapsedMillis: https://github.com/pfeerick/elapsedMillis
 #include <elapsedMillis.h>
-// CircularBuffer: https://github.com/rlogiacco/CircularBuffer
+#include <SerialCommand.h>
 // for log
 #include <math.h>
 #include "KeyHammer.h"
@@ -88,8 +88,6 @@ elapsedMicros loopTimerUS;
 
 // whether or not to print in the current loop
 bool printInfo = false;
-// whether to use print statements for arduino serial plotter; if false, print text and disregard serial plotter formatting
-const bool plotSerial = true;
 // used to restrict printing to only a few iterations after certain events
 elapsedMillis printTimerMS = 0;
 
@@ -106,6 +104,7 @@ KeyHammer keys[] = {
 };
 
 int printkey = 0;
+bool printAllKeys = false;
 void incrementPrintKey () {
   // Serial.print("Interrupt ");
   // Serial.print(y++);
@@ -127,6 +126,8 @@ void decrementPrintKey () {
 
 Bounce2::Button b_toggle_calibration = Bounce2::Button();
 
+SerialCommand sCmd;
+
 
 void setup() {
   Serial.begin(57600);
@@ -140,6 +141,10 @@ void setup() {
   b_toggle_calibration.interval(5);
   b_toggle_calibration.setPressedState(LOW); 
 
+  sCmd.addCommand("c", toggleCalibration);
+  sCmd.addCommand("pk", setPrintKey);
+  sCmd.setDefaultHandler(unrecognizedCmd);
+  
   midiSender.initialize();
 
   // ADC settings
@@ -163,6 +168,47 @@ void toggleCalibration () {
   }
 }
 
+//// sCmd commands
+
+// function to set printkey, based on a key number
+void setPrintKey (const char *command) {
+  int key;
+  char *arg;
+
+  arg = sCmd.next();
+  if (arg != NULL) {
+    // check if the argument is 'a'
+    if (strcmp(arg, "a") == 0) {
+      printAllKeys = true;
+      return;
+    }
+
+    // atoi vs atol:
+    // atoi: convert string to int
+    // atol: convert string to long
+    key = atoi(arg);
+    Serial.print("Second argument was: ");
+    Serial.println(key);
+    printkey = key % n_keys;
+    printAllKeys = false;
+  }
+  else {
+    Serial.println("No second argument, required by command: ");
+    Serial.println(command);
+    
+  }
+
+
+}
+
+// function for unrecognized commands
+void unrecognizedCmd (const char *command) {
+  Serial.print("Command not recognized: ");
+  Serial.println(command);
+}
+
+
+
 void loop() {
   if (printTimerMS > 100) {
     printInfo = true;
@@ -170,7 +216,7 @@ void loop() {
 
   if (keys[0].elapsedUS >= 1250) {
     for (int i = 0; i < n_keys; i++) {
-      if (printInfo & i == printkey) {
+      if (printInfo & (i == printkey) || printAllKeys ) {
         keys[i].printState();
         Serial.flush();
       }
@@ -194,6 +240,8 @@ void loop() {
     // do any loop end actions, such as reading any new MIDI messages
     midiSender.loopEnd();
   }
+  // check if there are any new commands
+  sCmd.readSerial();
 }
   
 

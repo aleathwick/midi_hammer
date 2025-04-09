@@ -87,7 +87,7 @@ elapsedMicros loopTimerUS;
 
 
 // whether or not to print in the current loop
-bool printInfo = true;
+bool printInfo = false;
 // whether to use print statements for arduino serial plotter; if false, print text and disregard serial plotter formatting
 const bool plotSerial = true;
 // used to restrict printing to only a few iterations after certain events

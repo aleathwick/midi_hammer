@@ -200,10 +200,29 @@ enum KeyAttributes {
   NUM_ATTRIBUTES // Total number of attributes
 };
 
+const char* keyAttributeAbbrev[NUM_ATTRIBUTES] = {
+  "adc",  // RAW_ADC
+  "kp",   // KEY_POSITION
+  "ks",   // KEY_SPEED
+  "hp",   // HAMMER_POSITION
+  "hs",   // HAMMER_SPEED
+  "el"    // ELAPSED
+};
+
+// full names for printing?
+const char* keyAttributeNames[NUM_ATTRIBUTES] = {
+  "rawADC",
+  "keyPos",
+  "keySpeed",
+  "hammerPos",
+  "hammerSpeed",
+  "elapsedUS"
+};
+
 // which attributes to print
 bool attributeStates[NUM_ATTRIBUTES] = {true, true, true, true, true, true}; // All attributes enabled by default
 
-// function to toggle printing of attributes
+// choose which attributes of keys to print
 void togglePrintAttributes(const char *command) {
   char *arg = sCmd.next();
   if (arg != NULL) {
@@ -215,53 +234,59 @@ void togglePrintAttributes(const char *command) {
       for (int i = 0; i < NUM_ATTRIBUTES; i++) {
         attributeStates[i] = false;
       }
-    } else if (strcmp(arg, "adc") == 0) {
-        attributeStates[RAW_ADC] = !attributeStates[RAW_ADC];
-    } else if (strcmp(arg, "kp") == 0) {
-        attributeStates[KEY_POSITION] = !attributeStates[KEY_POSITION];
-    } else if (strcmp(arg, "ks") == 0) {
-        attributeStates[KEY_SPEED] = !attributeStates[KEY_SPEED];
-    } else if (strcmp(arg, "hp") == 0) {
-        attributeStates[HAMMER_POSITION] = !attributeStates[HAMMER_POSITION];
-    } else if (strcmp(arg, "hs") == 0) {
-        attributeStates[HAMMER_SPEED] = !attributeStates[HAMMER_SPEED];
-    } else if (strcmp(arg, "el") == 0) {
-        attributeStates[ELAPSED] = !attributeStates[ELAPSED];
-    } else if (isdigit(arg[0])) {
-      // Toggle a specific attribute by index
-      int attrIndex = atoi(arg);
-      if (attrIndex >= 0 && attrIndex < NUM_ATTRIBUTES) {
-        attributeStates[attrIndex] = !attributeStates[attrIndex];
-      } else {
-        Serial.println("Invalid attribute index.");
-      }
     } else {
-      Serial.println("Invalid argument. Use 'all', 'none', or an attribute index / shorthand.");
+      // Check if arg matches any abbreviation
+      bool found = false;
+      for (int i = 0; i < NUM_ATTRIBUTES; i++) {
+        if (strcmp(arg, keyAttributeAbbrev[i]) == 0) {
+          attributeStates[i] = !attributeStates[i];
+          found = true;
+          break;
+        }
+      }
+      
+      if (!found && isdigit(arg[0])) {
+        // Toggle a specific attribute by index
+        int attrIndex = atoi(arg);
+        if (attrIndex >= 0 && attrIndex < NUM_ATTRIBUTES) {
+          attributeStates[attrIndex] = !attributeStates[attrIndex];
+        } else {
+          Serial.println("Invalid attribute index.");
+        }
+      } else if (!found) {
+        Serial.println("Invalid argument. Use 'all', 'none', or an attribute index / shorthand.");
+      }
     }
   } else {
     Serial.println("No argument provided. Use 'all', 'none', or an attribute index / shorthand.");
   }
 }
 
-// function to print the state of a key
+// print the state of a key (limited to the attributes that are enabled)
 void printKeyState(int i) {
-  if (attributeStates[RAW_ADC]) {
-    Serial.printf("rawADC_%d:%d,", keys[i].pitch, keys[i].getRawADC());
-  }
-  if (attributeStates[KEY_POSITION]) {
-    Serial.printf("keyPos_%d:%f,", keys[i].pitch, keys[i].getKeyPosition());
-  }
-  if (attributeStates[KEY_SPEED]) {
-    Serial.printf("keySpeed_%d:%f,", keys[i].pitch, keys[i].getKeySpeed());
-  }
-  if (attributeStates[HAMMER_POSITION]) {
-    Serial.printf("hammerPos_%d:%f,", keys[i].pitch, keys[i].getHammerPosition());
-  }
-  if (attributeStates[HAMMER_SPEED]) {
-    Serial.printf("hammerSpeed_%d:%f,", keys[i].pitch, keys[i].getHammerSpeed());
-  }
-  if (attributeStates[ELAPSED]) {
-    Serial.printf("elapsedUS_%d:%d,", keys[i].pitch, keys[i].getElapsedUS());
+  for (int attr = 0; attr < NUM_ATTRIBUTES; attr++) {
+    if (attributeStates[attr]) {
+      switch (attr) {
+        case RAW_ADC:
+          Serial.printf("%s_%d-%d:%d,", keyAttributeAbbrev[attr], i, keys[i].pitch, keys[i].getRawADC());
+          break;
+        case KEY_POSITION:
+          Serial.printf("%s_%d-%d:%f,", keyAttributeAbbrev[attr], i, keys[i].pitch, keys[i].getKeyPosition());
+          break;
+        case KEY_SPEED:
+          Serial.printf("%s_%d-%d:%f,", keyAttributeAbbrev[attr], i, keys[i].pitch, keys[i].getKeySpeed());
+          break;
+        case HAMMER_POSITION:
+          Serial.printf("%s_%d-%d:%f,", keyAttributeAbbrev[attr], i, keys[i].pitch, keys[i].getHammerPosition());
+          break;
+        case HAMMER_SPEED:
+          Serial.printf("%s_%d-%d:%f,", keyAttributeAbbrev[attr], i, keys[i].pitch, keys[i].getHammerSpeed());
+          break;
+        case ELAPSED:
+          Serial.printf("%s_%d-%d:%d,", keyAttributeAbbrev[attr], i, keys[i].pitch, keys[i].getElapsedUS());
+          break;
+      }
+    }
   }
 }
 

@@ -105,24 +105,6 @@ KeyHammer keys[] = {
 
 int printkey = 0;
 bool printAllKeys = false;
-void incrementPrintKey () {
-  // Serial.print("Interrupt ");
-  // Serial.print(y++);
-  // Serial.println();
-  delay(15);
-  if (digitalRead(1) == 0) {
-    printkey = (printkey + 1) % n_keys;
-  }
-}
-void decrementPrintKey () {
-  // Serial.print("Interrupt ");
-  // Serial.print(y++);
-  // Serial.println();
-  delay(15);
-  if (digitalRead(2) == 0) {
-    printkey = (printkey - 1) % n_keys;
-  }
-}
 
 Bounce2::Button b_toggle_calibration = Bounce2::Button();
 
@@ -132,10 +114,6 @@ SerialCommand sCmd;
 void setup() {
   Serial.begin(57600);
   pinMode(LED_BUILTIN, OUTPUT);
-  pinMode(1, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(1), incrementPrintKey, CHANGE);
-  pinMode(2, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(2), decrementPrintKey, CHANGE);
 
   b_toggle_calibration.attach( calibrationPin, INPUT_PULLUP );
   b_toggle_calibration.interval(5);
@@ -143,8 +121,9 @@ void setup() {
 
   sCmd.addCommand("c", toggleCalibration);
   sCmd.addCommand("pk", setPrintKey);
+  sCmd.addCommand("pka", togglePrintAttributes);
   sCmd.setDefaultHandler(unrecognizedCmd);
-  
+
   midiSender.initialize();
 
   // ADC settings
@@ -195,10 +174,86 @@ void setPrintKey (const char *command) {
   else {
     Serial.println("No second argument, required by command: ");
     Serial.println(command);
-    
+
   }
 
 
+}
+
+// key attributes for printing
+enum KeyAttributes {
+  RAW_ADC = 0,
+  KEY_POSITION,
+  KEY_SPEED,
+  HAMMER_POSITION,
+  HAMMER_SPEED,
+  ELAPSED,
+  NUM_ATTRIBUTES // Total number of attributes
+};
+
+// which attributes to print
+bool attributeStates[NUM_ATTRIBUTES] = {true, true, true, true, true, true}; // All attributes enabled by default
+
+// function to toggle printing of attributes
+void togglePrintAttributes(const char *command) {
+  char *arg = sCmd.next();
+  if (arg != NULL) {
+    if (strcmp(arg, "all") == 0) {
+      for (int i = 0; i < NUM_ATTRIBUTES; i++) {
+        attributeStates[i] = true;
+      }
+    } else if (strcmp(arg, "none") == 0) {
+      for (int i = 0; i < NUM_ATTRIBUTES; i++) {
+        attributeStates[i] = false;
+      }
+    } else if (strcmp(arg, "adc") == 0) {
+        attributeStates[RAW_ADC] = !attributeStates[RAW_ADC];
+    } else if (strcmp(arg, "kp") == 0) {
+        attributeStates[KEY_POSITION] = !attributeStates[KEY_POSITION];
+    } else if (strcmp(arg, "ks") == 0) {
+        attributeStates[KEY_SPEED] = !attributeStates[KEY_SPEED];
+    } else if (strcmp(arg, "hp") == 0) {
+        attributeStates[HAMMER_POSITION] = !attributeStates[HAMMER_POSITION];
+    } else if (strcmp(arg, "hs") == 0) {
+        attributeStates[HAMMER_SPEED] = !attributeStates[HAMMER_SPEED];
+    } else if (strcmp(arg, "el") == 0) {
+        attributeStates[ELAPSED] = !attributeStates[ELAPSED];
+    } else if (isdigit(arg[0])) {
+      // Toggle a specific attribute by index
+      int attrIndex = atoi(arg);
+      if (attrIndex >= 0 && attrIndex < NUM_ATTRIBUTES) {
+        attributeStates[attrIndex] = !attributeStates[attrIndex];
+      } else {
+        Serial.println("Invalid attribute index.");
+      }
+    } else {
+      Serial.println("Invalid argument. Use 'all', 'none', or an attribute index / shorthand.");
+    }
+  } else {
+    Serial.println("No argument provided. Use 'all', 'none', or an attribute index / shorthand.");
+  }
+}
+
+// function to print the state of a key
+void printKeyState(int i) {
+  if (attributeStates[RAW_ADC]) {
+    Serial.printf("rawADC_%d:%d,", keys[i].pitch, keys[i].getRawADC());
+  }
+  if (attributeStates[KEY_POSITION]) {
+    Serial.printf("keyPos_%d:%f,", keys[i].pitch, keys[i].getKeyPosition());
+  }
+  if (attributeStates[KEY_SPEED]) {
+    Serial.printf("keySpeed_%d:%f,", keys[i].pitch, keys[i].getKeySpeed());
+  }
+  if (attributeStates[HAMMER_POSITION]) {
+    Serial.printf("hammerPos_%d:%f,", keys[i].pitch, keys[i].getHammerPosition());
+  }
+  if (attributeStates[HAMMER_SPEED]) {
+    Serial.printf("hammerSpeed_%d:%f,", keys[i].pitch, keys[i].getHammerSpeed());
+  }
+  if (attributeStates[ELAPSED]) {
+    Serial.printf("elapsedUS_%d:%d,", keys[i].pitch, keys[i].getElapsedUS());
+  }
 }
 
 // function for unrecognized commands
@@ -217,7 +272,7 @@ void loop() {
   if (keys[0].elapsedUS >= 1250) {
     for (int i = 0; i < n_keys; i++) {
       if (printInfo & (i == printkey) || printAllKeys ) {
-        keys[i].printState();
+        printKeyState(i);
         Serial.flush();
       }
       keys[i].step();

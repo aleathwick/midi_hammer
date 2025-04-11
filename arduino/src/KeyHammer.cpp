@@ -325,21 +325,6 @@ float KeyHammer::applyFilter(CircularBuffer<T, bufferLength>& buffer, float (&fi
   return filteredValue;
 }
 
-void KeyHammer::printState () {
-  if (operationMode=='p'){
-    Serial.printf("key_%d:%f,", pitch, keyPosition);
-    Serial.printf("rawADC_%d:%d,", pitch, rawADC);
-    Serial.printf("elapsedUS_%d:%d,", pitch, elapsedUSBuffer.last());
-    Serial.printf("controlValue_%d:%d,", pitch, controlValue);
-  } else if (operationMode=='h'){
-    // Serial.printf("%d %f %f ", keyPosition, keySpeed, hammerSpeed);
-    Serial.printf("hammer_%d:%f,", pitch, hammerPosition);
-    Serial.printf("rawADC_%d:%d,", pitch, rawADC);
-    Serial.printf("hammerSpeed_%d:%f,", pitch, hammerSpeed);
-    Serial.printf("elapsedUS_%d:%d,", pitch, elapsedUSBuffer.last());
-  }
-
-}
 
 void KeyHammer::printBuffers () {
   int delayUS = 15;

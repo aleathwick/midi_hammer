@@ -58,8 +58,6 @@ class KeyHammer
     int keyResetThreshold;
     int sensorMin;
     int sensorMax;
-
-    int pitch;
     
     int rawADC;
     float keyPosition;
@@ -147,10 +145,20 @@ class KeyHammer
     // KeyHammer object and apply it to another.
     void generateVelocityMap();
     int controlNumber;
-    void printState();
     void toggleCalibration();
 
     elapsedMicros elapsedUS;
     // for keeping track of time since last note on
     elapsedMicros noteOnElapsedUS;
+
+    float getKeyPosition() const { return keyPosition; }
+    float getKeySpeed() const { return keySpeed; }
+    float getHammerPosition() const { return hammerPosition; }
+    float getHammerSpeed() const { return hammerSpeed; }
+    int getRawADC() const { return rawADC; }
+    int getElapsedUS() const { return elapsedUSBuffer.last(); }
+    // int getPitch() const { return pitch; }
+    int pitch;
+
+
 };

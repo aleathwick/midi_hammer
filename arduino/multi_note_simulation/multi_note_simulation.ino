@@ -18,6 +18,7 @@ To do:
 #include <SerialCommand.h>
 // for log
 #include <math.h>
+#include <Bounce2.h>
 #include "KeyHammer.h"
 
 // board specific imports and midi setup

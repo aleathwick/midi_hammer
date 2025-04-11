@@ -90,8 +90,16 @@ elapsedMicros loopTimerUS;
 bool printInfo = false;
 // whether or not to print in the current loop
 bool printInfoTriggered = false;
-// used to restrict printing to only a few iterations after certain events
+// used to restrict printing so we don't overload serial
 elapsedMillis printTimerMS = 0;
+// used to restrict printing briefly after serial cmd info printed
+// only applies to stream mode
+elapsedMillis serialMsgTimerMS = 0;
+void pausePrintStream() {
+  serialMsgTimerMS = 0;
+}
+
+int serialMsgDelay = 1700;
 
 elapsedMillis testAdcTimerMS;
 int testFunction() {
@@ -161,18 +169,26 @@ void changePrintMode (const char *command) {
     if (strcmp(arg, "stream") == 0) {
       printInfo = true;
       keyPrintMode = PRINT_NONE;
+      Serial.println("stream mode");
+      pausePrintStream();
     } else if (strcmp(arg, "buffers") == 0) {
       printInfo = false;
       keyPrintMode = PRINT_BUFFER;
+      Serial.println("buffer mode");
+      pausePrintStream();
     } else if (strcmp(arg, "notes") == 0) {
       printInfo = false;
       keyPrintMode = PRINT_NOTES;
+      Serial.println("notes mode");
+      pausePrintStream();
     } else if (strcmp(arg, "none") == 0) {
       printInfo = false;
       keyPrintMode = PRINT_NONE;
+      Serial.println("printing disabled");
     } else {
       Serial.print("Second argument must be 'stream', 'buffers', 'notes', or 'none': ");
       Serial.println(arg);
+      pausePrintStream();
     }
     updateKeyPrintModes();
   }
@@ -182,10 +198,6 @@ void updateKeyPrintModes () {
   for (int i = 0; i < n_keys; i++) {
     if ((i == printkey) || printAllKeys ) {
       keys[i].setPrintMode(keyPrintMode);
-      Serial.print("Key ");
-      Serial.print(i);
-      Serial.print(" print mode set to: ");
-      Serial.println(keyPrintMode);
     } else {
       keys[i].setPrintMode(PRINT_NONE);
     }
@@ -211,19 +223,19 @@ void setPrintKey (const char *command) {
       // atoi: convert string to int
       // atol: convert string to long
       key = atoi(arg);
-      Serial.print("Second argument was: ");
-      Serial.println(key);
       printkey = key % n_keys;
       printAllKeys = false;
     } else {
       Serial.print("Second argument must be 'all', '-', '+', or a number: ");
       Serial.println(arg);
+      pausePrintStream();
     }
     updateKeyPrintModes();
   }
   else {
     Serial.println("No second argument, required by command: ");
     Serial.println(command);
+    pausePrintStream();
 
   }
 
@@ -293,13 +305,16 @@ void togglePrintAttributes(const char *command) {
           attributeStates[attrIndex] = !attributeStates[attrIndex];
         } else {
           Serial.println("Invalid attribute index.");
+          pausePrintStream();
         }
       } else if (!found) {
         Serial.println("Invalid argument. Use 'all', 'none', or an attribute index / shorthand.");
+        pausePrintStream();
       }
     }
   } else {
     Serial.println("No argument provided. Use 'all', 'none', or an attribute index / shorthand.");
+    pausePrintStream();
   }
 }
 
@@ -335,12 +350,13 @@ void printKeyState(int i) {
 void unrecognizedCmd (const char *command) {
   Serial.print("Command not recognized: ");
   Serial.println(command);
+  pausePrintStream();
 }
 
 
 
 void loop() {
-  if ((printInfo) & (printTimerMS > 100)) {
+  if ((printInfo) & (printTimerMS > 100) & (serialMsgTimerMS > serialMsgDelay)) {
     printInfoTriggered = true;
   }
 

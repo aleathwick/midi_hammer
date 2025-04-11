@@ -158,19 +158,27 @@ void setPrintKey (const char *command) {
   arg = sCmd.next();
   if (arg != NULL) {
     // check if the argument is 'a'
-    if (strcmp(arg, "a") == 0) {
+    if (strcmp(arg, "all") == 0) {
       printAllKeys = true;
       return;
+    } else if (strcmp(arg, "-") == 0){
+      printkey = (printkey - 1) % n_keys;
+    } else if (strcmp(arg, "+") == 0){
+      printkey = (printkey + 1) % n_keys;
+      } else if (isdigit(arg[0])) {
+      // atoi vs atol:
+      // atoi: convert string to int
+      // atol: convert string to long
+      key = atoi(arg);
+      Serial.print("Second argument was: ");
+      Serial.println(key);
+      printkey = key % n_keys;
+      printAllKeys = false;
+    } else {
+      Serial.print("Second argument must be 'all', none, '-', '+', or a number: ");
+      Serial.println(arg);
+      return;
     }
-
-    // atoi vs atol:
-    // atoi: convert string to int
-    // atol: convert string to long
-    key = atoi(arg);
-    Serial.print("Second argument was: ");
-    Serial.println(key);
-    printkey = key % n_keys;
-    printAllKeys = false;
   }
   else {
     Serial.println("No second argument, required by command: ");

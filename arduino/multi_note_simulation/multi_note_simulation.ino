@@ -122,6 +122,7 @@ void setup() {
   b_toggle_calibration.setPressedState(LOW); 
 
   sCmd.addCommand("c", toggleCalibration);
+  sCmd.addCommand("pm", changePrintMode);
   sCmd.addCommand("pk", setPrintKey);
   sCmd.addCommand("pka", togglePrintAttributes);
   sCmd.setDefaultHandler(unrecognizedCmd);
@@ -151,6 +152,46 @@ void toggleCalibration () {
 
 //// sCmd commands
 
+PrintMode keyPrintMode;
+// change print mode
+void changePrintMode (const char *command) {
+  
+  char *arg = sCmd.next();
+  if (arg != NULL) {
+    if (strcmp(arg, "stream") == 0) {
+      printInfo = true;
+      keyPrintMode = PRINT_NONE;
+    } else if (strcmp(arg, "buffers") == 0) {
+      printInfo = false;
+      keyPrintMode = PRINT_BUFFER;
+    } else if (strcmp(arg, "notes") == 0) {
+      printInfo = false;
+      keyPrintMode = PRINT_NOTES;
+    } else if (strcmp(arg, "none") == 0) {
+      printInfo = false;
+      keyPrintMode = PRINT_NONE;
+    } else {
+      Serial.print("Second argument must be 'stream', 'buffers', 'notes', or 'none': ");
+      Serial.println(arg);
+    }
+    updateKeyPrintModes();
+  }
+}
+
+void updateKeyPrintModes () {
+  for (int i = 0; i < n_keys; i++) {
+    if ((i == printkey) || printAllKeys ) {
+      keys[i].setPrintMode(keyPrintMode);
+      Serial.print("Key ");
+      Serial.print(i);
+      Serial.print(" print mode set to: ");
+      Serial.println(keyPrintMode);
+    } else {
+      keys[i].setPrintMode(PRINT_NONE);
+    }
+  }
+}
+
 // function to set printkey, based on a key number
 void setPrintKey (const char *command) {
   int key;
@@ -160,19 +201,12 @@ void setPrintKey (const char *command) {
   if (arg != NULL) {
     // check if the argument is 'a'
     if (strcmp(arg, "all") == 0) {
-      printInfo = true;
       printAllKeys = true;
-      return;
-    } else if (strcmp(arg, "none") == 0) {
-      printInfo = false;
     } else if (strcmp(arg, "-") == 0){
-      printInfo = true;
       printkey = (printkey - 1) % n_keys;
     } else if (strcmp(arg, "+") == 0){
-      printInfo = true;
       printkey = (printkey + 1) % n_keys;
     } else if (isdigit(arg[0])) {
-        printInfo = true;
       // atoi vs atol:
       // atoi: convert string to int
       // atol: convert string to long
@@ -182,10 +216,10 @@ void setPrintKey (const char *command) {
       printkey = key % n_keys;
       printAllKeys = false;
     } else {
-      Serial.print("Second argument must be 'all', none, '-', '+', or a number: ");
+      Serial.print("Second argument must be 'all', '-', '+', or a number: ");
       Serial.println(arg);
-      return;
     }
+    updateKeyPrintModes();
   }
   else {
     Serial.println("No second argument, required by command: ");
@@ -227,7 +261,7 @@ const char* keyAttributeNames[NUM_ATTRIBUTES] = {
 };
 
 // which attributes to print
-bool attributeStates[NUM_ATTRIBUTES] = {true, true, true, true, true, true}; // All attributes enabled by default
+bool attributeStates[NUM_ATTRIBUTES] = {true, false, false,false,false,false}; // All attributes enabled by default
 
 // choose which attributes of keys to print
 void togglePrintAttributes(const char *command) {

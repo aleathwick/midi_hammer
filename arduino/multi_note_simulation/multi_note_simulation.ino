@@ -86,9 +86,10 @@ int readAdc(int enable_i, int address_0, int address_1, int address_2) {
 elapsedMillis infoTimerMS;
 elapsedMicros loopTimerUS;
 
-
-// whether or not to print in the current loop
+// whether or not to print (at all, in any loop)
 bool printInfo = false;
+// whether or not to print in the current loop
+bool printInfoTriggered = false;
 // used to restrict printing to only a few iterations after certain events
 elapsedMillis printTimerMS = 0;
 
@@ -159,13 +160,19 @@ void setPrintKey (const char *command) {
   if (arg != NULL) {
     // check if the argument is 'a'
     if (strcmp(arg, "all") == 0) {
+      printInfo = true;
       printAllKeys = true;
       return;
+    } else if (strcmp(arg, "none") == 0) {
+      printInfo = false;
     } else if (strcmp(arg, "-") == 0){
+      printInfo = true;
       printkey = (printkey - 1) % n_keys;
     } else if (strcmp(arg, "+") == 0){
+      printInfo = true;
       printkey = (printkey + 1) % n_keys;
-      } else if (isdigit(arg[0])) {
+    } else if (isdigit(arg[0])) {
+        printInfo = true;
       // atoi vs atol:
       // atoi: convert string to int
       // atol: convert string to long
@@ -299,13 +306,13 @@ void unrecognizedCmd (const char *command) {
 
 
 void loop() {
-  if (printTimerMS > 100) {
-    printInfo = true;
+  if ((printInfo) & (printTimerMS > 100)) {
+    printInfoTriggered = true;
   }
 
   if (keys[0].elapsedUS >= 1250) {
     for (int i = 0; i < n_keys; i++) {
-      if (printInfo & (i == printkey) || printAllKeys ) {
+      if (printInfoTriggered & ((i == printkey) || printAllKeys )) {
         printKeyState(i);
         Serial.flush();
       }
@@ -313,9 +320,9 @@ void loop() {
 
     }
 
-    if (printInfo) {
+    if (printInfoTriggered) {
       Serial.print('\n');
-      printInfo = false;
+      printInfoTriggered = false;
       printTimerMS = 0;
     }
 

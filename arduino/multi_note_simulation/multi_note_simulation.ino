@@ -247,6 +247,7 @@ void changePrintMode (const char *command) {
       keyPrintMode = PRINT_NONE;
       Serial.println("printing disabled");
     } else {
+      Serial.print("\n");
       Serial.print("Second argument must be 'stream', 'buffers', 'notes', or 'none': ");
       Serial.println(arg);
       pausePrintStream();
@@ -254,6 +255,7 @@ void changePrintMode (const char *command) {
     updateKeyPrintModes();
   } 
   else {
+    Serial.print("\n");
     Serial.println("Current print mode: ");
     Serial.println(printModeNames[keyPrintMode]);
     pausePrintStream();
@@ -292,6 +294,7 @@ void setPrintKey (const char *command) {
       printkey = key % n_keys;
       printAllKeys = false;
     } else {
+      Serial.print("\n");
       Serial.print("Second argument must be 'all', '-', '+', or a number: ");
       Serial.println(arg);
       pausePrintStream();
@@ -299,6 +302,7 @@ void setPrintKey (const char *command) {
     updateKeyPrintModes();
   }
   else {
+    Serial.print("\n");
     Serial.printf("printKey = %d (pitch %d), printAllKeys = %d, with printMode = %s\n", printkey, keys[printkey].pitch, printAllKeys, printModeNames[keyPrintMode]);
     pausePrintStream();
 
@@ -373,12 +377,17 @@ void togglePrintAttributes(const char *command) {
           pausePrintStream();
         }
       } else if (!found) {
+        Serial.print("\n");
         Serial.println("Invalid argument. Use 'all', 'none', or an attribute index / shorthand.");
         pausePrintStream();
       }
     }
   } else {
-    Serial.println("No argument provided. Use 'all', 'none', or an attribute index / shorthand.");
+    Serial.print("\n");
+    Serial.println("Current attribute states:");
+    for (int i = 0; i < NUM_ATTRIBUTES; i++) {
+      Serial.printf("%s (%s): %s\n", keyAttributeNames[i], keyAttributeAbbrev[i], attributeStates[i] ? "enabled" : "disabled");
+    }
     pausePrintStream();
   }
 }
@@ -411,7 +420,7 @@ void printKeyState(int i) {
   }
 }
 
-int printFreqMS = 1000; // print frequency in ms
+int printFreqMS = 200; // print frequency in ms
 
 void setPrintFrequency() {
   char *arg = sCmd.next();
@@ -420,10 +429,12 @@ void setPrintFrequency() {
     if (freq > 0) {
       printFreqMS = freq;
     } else {
+      Serial.print("\n");
       Serial.println("Invalid frequency. Must be a positive integer.");
       pausePrintStream();
     }
   } else {
+    Serial.print("\n");
     Serial.println("current print frequency (MS): ");
     Serial.println(printFreqMS);
     pausePrintStream();
@@ -433,8 +444,10 @@ void setPrintFrequency() {
 
 // function for unrecognized commands
 void unrecognizedCmd (const char *command) {
+  Serial.print("\n");
   Serial.print("Command not recognized: ");
   Serial.println(command);
+  Serial.print("Type 'help' for a list of commands.\n");
   pausePrintStream();
 }
 

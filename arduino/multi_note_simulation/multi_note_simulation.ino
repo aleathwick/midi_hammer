@@ -124,6 +124,7 @@ KeyHammer keys[] = {
   { []() -> int { return readAdc(signalPins[1], 0, 0, 0, settle_delay); }, &midiSenderDummy, 64, 608, 545 , hammer_travel, minPressUS}
 };
 
+int nPedals = 1;
 Pedal pedals[] = {
   { []() -> int { return readAdc(signalPins[0], 1, 0, 0, settle_delay); }, &midiSender, 64, 584, 534 },
 };
@@ -435,7 +436,7 @@ void loop() {
       }
       keys[i].step();
     }
-    for (int i = 0; i < sizeof(pedals) / sizeof(pedals[0]); i++) {
+    for (int i = 0; i < nPedals; i++) {
       pedals[i].step();
     }
 

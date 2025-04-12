@@ -133,6 +133,7 @@ void setup() {
   sCmd.addCommand("pm", changePrintMode);
   sCmd.addCommand("pk", setPrintKey);
   sCmd.addCommand("pka", togglePrintAttributes);
+  sCmd.addCommand("pf", setPrintFrequency);
   sCmd.setDefaultHandler(unrecognizedCmd);
 
   midiSender.initialize();
@@ -346,6 +347,26 @@ void printKeyState(int i) {
   }
 }
 
+int printFreqMS = 1000; // print frequency in ms
+
+void setPrintFrequency() {
+  char *arg = sCmd.next();
+  if (arg != NULL) {
+    int freq = atoi(arg);
+    if (freq > 0) {
+      printFreqMS = freq;
+    } else {
+      Serial.println("Invalid frequency. Must be a positive integer.");
+      pausePrintStream();
+    }
+  } else {
+    Serial.println("current print frequency (MS): ");
+    Serial.println(printFreqMS);
+    pausePrintStream();
+  }
+  
+}
+
 // function for unrecognized commands
 void unrecognizedCmd (const char *command) {
   Serial.print("Command not recognized: ");
@@ -356,7 +377,7 @@ void unrecognizedCmd (const char *command) {
 
 
 void loop() {
-  if ((printInfo) & (printTimerMS > 100) & (serialMsgTimerMS > serialMsgDelay)) {
+  if ((printInfo) & (printTimerMS > printFreqMS) & (serialMsgTimerMS > serialMsgDelay)) {
     printInfoTriggered = true;
   }
 

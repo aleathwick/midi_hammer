@@ -15,8 +15,8 @@ int velocityMap[velocityMapLength];
 
 
 // use a constructor initializer list for adc, otherwise the reference won't work
-KeyHammer::KeyHammer (int(*adcFnPtr)(void), MidiSender* midiSender, int pitch, char operationMode='h', int sensorFullyOn=430, int sensorFullyOff=50, float hammer_travel=4.5, int minPressUS=8500)
-  : adcFnPtr(adcFnPtr), midiSender(midiSender), pitch(pitch), operationMode(operationMode), sensorFullyOn(sensorFullyOn), sensorFullyOff(sensorFullyOff), hammer_travel(hammer_travel), minPressUS(minPressUS) {
+KeyHammer::KeyHammer (int(*adcFnPtr)(void), MidiSender* midiSender, int pitch, int sensorFullyOn=430, int sensorFullyOff=50, float hammer_travel=4.5, int minPressUS=8500)
+  : adcFnPtr(adcFnPtr), midiSender(midiSender), pitch(pitch), sensorFullyOn(sensorFullyOn), sensorFullyOff(sensorFullyOff), hammer_travel(hammer_travel), minPressUS(minPressUS) {
   
   updateADCParams();
   
@@ -33,11 +33,6 @@ KeyHammer::KeyHammer (int(*adcFnPtr)(void), MidiSender* midiSender, int pitch, c
   scaleFilterWeights(keyPosFilter);
 
   elapsedUS = 0;
-
-  lastControlValue = 0;
-  controlValue = 0;
-  // default to 64 (sustain); manually change if necessary
-  controlNumber = 64;
 
   // initialize velocity map
   if (velocityMap[velocityMapLength-1] == 0) {
@@ -239,39 +234,13 @@ void KeyHammer::stepHammer () {
 }
 
 
-void KeyHammer::stepPedal () {
-  updateKey();
-  updateElapsed();
-  lastControlValue = controlValue;
-  // this could be sped up by precomputing the possible values
-  controlValue = (int)((keyPosition - sensorFullyOff) / float(sensorFullyOn - sensorFullyOff) * 127);
-  if (controlValue != lastControlValue) {
-    // control numbers:
-    // 1 = Modulation wheel
-    // 2 = Breath Control
-    // 7 = Volume
-    // 10 = Pan
-    // 11 = Expression
-    // 64 = Sustain Pedal (on/off)
-    // 65 = Portamento (on/off)
-    // 67 = Soft Pedal
-    // 71 = Resonance (filter)
-    // 74 = Frequency Cutoff (filter)
-    midiSender->sendControlChange(controlNumber, controlValue, 2);
-  }
-  elapsedUS = 0;
-}
-
 void KeyHammer::step () {
   iterationBuffer.push(iteration);
   if (calibrating) {
     stepCalibration();
-  } else if (operationMode=='h')
+  } else
   {
     stepHammer();
-  } else if (operationMode=='p')
-  {
-    stepPedal();
   }
   iteration++;
 }

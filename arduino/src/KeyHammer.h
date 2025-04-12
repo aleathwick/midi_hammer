@@ -45,12 +45,16 @@ class KeyHammer
        0.00309598,  0.00515996,  0.00722394,  0.00928793,  0.01135191,
        0.01341589,  0.01547988,  0.01754386};
 
-    MidiSender* midiSender;
     // define the range of the sensors, with sensorFullyOn being the key fully depressed
   // this will work regardless of sensorFullyOn < sensorFullyOff or sensorFullyOff < sensorFullyOn
+  protected:
+    MidiSender* midiSender;
     int sensorFullyOn;
     int sensorFullyOff;
-    // threshold for hammer to activate note
+    float keyPosition;
+    // key and hammer speeds are measured in adc bits per microsecond
+    float keySpeed;
+  private:
     int noteOnThreshold;
     // threshold for key to trigger noteoff
     int noteOffThreshold;
@@ -60,10 +64,7 @@ class KeyHammer
     int sensorMax;
     
     int rawADC;
-    float keyPosition;
     int lastKeyPosition;
-    // key and hammer speeds are measured in adc bits per microsecond
-    float keySpeed;
 
     float hammerPosition;
     float hammerSpeed;
@@ -82,9 +83,6 @@ class KeyHammer
     // used to put hammer speed on an appropriate scale for indexing into velocityMap
     float hammerSpeedScaler;
 
-    // parameters for pedal mode
-    int lastControlValue;
-    int controlValue;
     // track number of simulation iterations
     int iteration = 0;
 
@@ -119,23 +117,24 @@ class KeyHammer
     void stepCalibration();
     void calibrationSample();
     void updateADCParams();
-    void updateElapsed();
-    void updateKey();
     void updateKeySpeed();
     void updateHammer();
     void checkNoteOn();
     void checkNoteOff();
     void test();
-    void stepHammer();
     void stepKey();
-    void stepPedal();
     void printBuffers();
+    
+  protected:
+    void updateElapsed();
+    void updateKey();
+    virtual void stepHammer();
+  
 
   public:
-    KeyHammer(int(*adcFnPtr)(void), MidiSender* midiSender,int pitch, char operationMode, int sensorFullyOn, int sensorFullyOff, float hammer_travel, int minPressUS);
+    KeyHammer(int(*adcFnPtr)(void), MidiSender* midiSender,int pitch, int sensorFullyOn, int sensorFullyOff, float hammer_travel, int minPressUS);
     void step();
     // operation mode switches between operation as a hammer simulation key, a key, or a pedal
-    char operationMode;
     int getAdcValue(void);
     // generateVelocityMap is used to fill values in for a blank velocity map.
     // In future, the plan is to keep a ref to a velocity map as a class member. generateVelocityMap

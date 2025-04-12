@@ -72,7 +72,7 @@ void KeyHammer::updateADCParams () {
 
 void KeyHammer::toggleCalibration () {
   if (! calibrating) {
-    c_mode = UP;
+    c_mode = CalibMode::UP;
     calibrating = true;
     c_elapsedMS = 0;
     c_sample_t = 0;
@@ -110,7 +110,7 @@ void KeyHammer::calibrationSample () {
 void KeyHammer::stepCalibration () {
   updateKey();
   updateElapsed();
-  if (c_mode == UP) {
+  if (c_mode == CalibMode::UP) {
     calibrationSample();
     if (c_elapsedMS > 1000) {
       // use Array_Stats to calculate statistics
@@ -118,7 +118,7 @@ void KeyHammer::stepCalibration () {
       //  in later versions of Statistical, this is median()
       c_up_sample_med = upStats.Quartile(2);
       c_up_sample_std = upStats.Standard_Deviation();
-      c_mode = DOWN;
+      c_mode = CalibMode::DOWN;
       c_sample_t = 0;
     }
   } else if (

@@ -15,7 +15,7 @@ enum PrintMode {
   PRINT_BUFFER
 };
 
-enum CalibMode {
+enum class CalibMode {
   UP,
   DOWN
 };

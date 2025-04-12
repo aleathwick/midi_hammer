@@ -85,7 +85,7 @@ void KeyHammer::toggleCalibration () {
     //  in later versions of Statistical, this is median()
     c_down_sample_med = downStats.Quartile(2);
     c_down_sample_std = downStats.Standard_Deviation();
-    if (abs(c_up_sample_med - c_down_sample_med) > (50 * c_up_sample_std)) {
+    if ((abs(c_up_sample_med - c_down_sample_med) > (20 * c_up_sample_std)) && (c_sample_t >= c_sample_n)) {
       sensorFullyOn = c_down_sample_med;
       sensorFullyOff = c_up_sample_med;
       updatedKeyDownThreshold = true;
@@ -124,8 +124,8 @@ void KeyHammer::stepCalibration () {
       c_sample_t = 0;
     }
   } else if (
-            (rawADC > (c_up_sample_med + 3 * c_up_sample_std))
-            or (rawADC < (c_up_sample_med - 3 * c_up_sample_std))
+            (rawADC > (c_up_sample_med + 15 * c_up_sample_std))
+            or (rawADC < (c_up_sample_med - 15 * c_up_sample_std))
           ) {
     calibrationSample();
   }

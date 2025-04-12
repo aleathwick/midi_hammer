@@ -88,8 +88,10 @@ void KeyHammer::toggleCalibration () {
     if (abs(c_up_sample_med - c_down_sample_med) > (50 * c_up_sample_std)) {
       sensorFullyOn = c_down_sample_med;
       sensorFullyOff = c_up_sample_med;
+      updatedKeyDownThreshold = true;
     } else {
       sensorFullyOff = c_up_sample_med;
+      updatedKeyDownThreshold = false;
     }
   updateADCParams();
 }
@@ -328,4 +330,25 @@ void KeyHammer::printBuffers () {
       delayMicroseconds(delayUS);
       Serial.flush();
     }
+}
+
+void KeyHammer::printKeyParams() {
+  Serial.println("-- SETTINGS --");
+  Serial.printf("pitch: %d\n", pitch);
+  Serial.printf("sensorFullyOn: %d\n", sensorFullyOn);
+  Serial.printf("sensorFullyOff: %d\n", sensorFullyOff);
+  Serial.printf("noteOnThreshold: %d\n", noteOnThreshold);
+  Serial.printf("noteOffThreshold: %d\n", noteOffThreshold);
+  Serial.printf("keyResetThreshold: %d\n", keyResetThreshold);
+  // results from calibration
+  Serial.println("-- CALIBRATION --");
+  Serial.printf("c_up_sample_med: %d \n", c_up_sample_med);
+  Serial.printf("c_up_sample_std: %f \n", c_up_sample_std);
+  Serial.printf("c_down_sample_med: %d \n", c_down_sample_med);
+  Serial.printf("c_down_sample_std: %f \n", c_down_sample_std);
+  Serial.printf("samples collected: %d \n", c_sample_t);
+  Serial.printf("samples used: %d \n", c_sample_n);
+  //updatedKeyDownThreshold
+  Serial.printf("updatedKeyDownThreshold: %d \n", updatedKeyDownThreshold);
+  Serial.flush();
 }

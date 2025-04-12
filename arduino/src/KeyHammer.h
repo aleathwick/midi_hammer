@@ -115,6 +115,8 @@ class KeyHammer
     int c_down_sample_med;
     float c_down_sample_std;
 
+    bool updatedKeyDownThreshold = false;
+
     elapsedMillis c_elapsedMS;
     void stepCalibration();
     void calibrationSample();
@@ -160,6 +162,7 @@ class KeyHammer
     int getElapsedUS() const { return elapsedUSBuffer.last(); }
     
     void setPrintMode(PrintMode mode) { printMode = mode; }
+    void printKeyParams(); // includes calibration results
 
     // int getPitch() const { return pitch; }
     int pitch;

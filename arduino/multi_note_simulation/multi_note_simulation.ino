@@ -139,6 +139,7 @@ SerialCommand sCmd;
 // help string, printed with "help" command
 const char* helpString = "Commands:\n"
                           "c: toggle calibration\n"
+                          "pp: print key parameters (including calibration results)\n"
                           "pm: change print mode (stream, buffers, notes, none)\n"
                           "pk: set print key (0-(nKeys-1), +, -)\n"
                           "pka: toggle print attributes (applicable to stream mode)\n"
@@ -163,6 +164,7 @@ void setup() {
   sCmd.addCommand("help", printHelp);
   sCmd.addCommand("h", printHelp);
   sCmd.addCommand("c", toggleCalibration);
+  sCmd.addCommand("pp", printKeyParams);
   sCmd.addCommand("pm", changePrintMode);
   sCmd.addCommand("pk", setPrintKey);
   sCmd.addCommand("pka", togglePrintAttributes);
@@ -270,6 +272,48 @@ void updateKeyPrintModes () {
       keys[i].setPrintMode(PRINT_NONE);
     }
   }
+}
+
+// function to print key settings/calibration results
+void printKeyParams() {
+  char *arg;
+  int key;
+
+  arg = sCmd.next();
+  if (arg != NULL) {
+    // check if the argument is 'a'
+    if (strcmp(arg, "all") == 0) {
+      for (int i = 0; i < n_keys; i++) {
+        Serial.print("\n");
+        Serial.printf("*** KEY %d ***\n", i);
+        keys[i].printKeyParams();
+      }
+    } else if (isdigit(arg[0])) {
+      // atoi vs atol:
+      // atoi: convert string to int
+      // atol: convert string to long
+      key = atoi(arg);
+      if (key < 0 || key >= n_keys) {
+        Serial.print("\n");
+        Serial.print("Key number out of range: ");
+        Serial.println(arg);
+        pausePrintStream();
+        return;
+      }
+      Serial.print("\n");
+      keys[key].printKeyParams();
+    } else {
+      Serial.print("\n");
+      Serial.print("Second argument must be 'all' or a number: ");
+      Serial.println(arg);
+      pausePrintStream();
+    }
+  } else {
+    Serial.print("\n");
+    Serial.print("must provide a key index or 'all'\n");
+    pausePrintStream();
+  }
+  
 }
 
 // function to set printkey, based on a key number

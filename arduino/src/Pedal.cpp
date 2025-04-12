@@ -13,8 +13,8 @@ void Pedal::processPedalValue() {
     lastControlValue = controlValue;
     
     // Calculate control value based on key position
-    controlValue = (int)((keyPosition - sensorFullyOff) / 
-                   float(sensorFullyOn - sensorFullyOff) * 127);
+    controlValue = (int)((keyPosition - adcValKeyUp) / 
+                   float(adcValKeyDown - adcValKeyUp) * 127);
     controlValue = constrain(controlValue, 0, 127);
     
     // Send MIDI control change message if value changed

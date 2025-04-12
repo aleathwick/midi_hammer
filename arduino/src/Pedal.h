@@ -22,8 +22,8 @@ public:
     int controlNumber;
 
     Pedal(int(*adcFnPtr)(void), MidiSender* midiSender, int controlNumber = 64, 
-          int sensorFullyOn = 430, int sensorFullyOff = 50)
-        : KeyHammer(adcFnPtr, midiSender, 0, sensorFullyOn, sensorFullyOff, 0, 0),
+          int adcValKeyDown = 430, int adcValKeyUp = 50)
+        : KeyHammer(adcFnPtr, midiSender, 0, adcValKeyDown, adcValKeyUp, 0, 0),
           controlNumber(controlNumber), lastControlValue(0), controlValue(0) {
     }
 

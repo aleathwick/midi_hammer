@@ -15,16 +15,16 @@ int velocityMap[velocityMapLength];
 
 
 // use a constructor initializer list for adc, otherwise the reference won't work
-KeyHammer::KeyHammer (int(*adcFnPtr)(void), MidiSender* midiSender, int pitch, int sensorFullyOn=430, int sensorFullyOff=50, float hammer_travel=4.5, int minPressUS=8500)
-  : adcFnPtr(adcFnPtr), midiSender(midiSender), pitch(pitch), sensorFullyOn(sensorFullyOn), sensorFullyOff(sensorFullyOff), hammer_travel(hammer_travel), minPressUS(minPressUS) {
+KeyHammer::KeyHammer (int(*adcFnPtr)(void), MidiSender* midiSender, int pitch, int adcValKeyDown=430, int adcValKeyUp=50, float hammer_travel=4.5, int minPressUS=8500)
+  : adcFnPtr(adcFnPtr), midiSender(midiSender), pitch(pitch), adcValKeyDown(adcValKeyDown), adcValKeyUp(adcValKeyUp), hammer_travel(hammer_travel), minPressUS(minPressUS) {
   
   updateADCParams();
   
-  keyPosition = sensorFullyOff;
-  lastKeyPosition = sensorFullyOff;
-  rawADC = sensorFullyOff;
+  keyPosition = adcValKeyUp;
+  lastKeyPosition = adcValKeyUp;
+  rawADC = adcValKeyUp;
   keySpeed = 0.0;
-  hammerPosition = sensorFullyOff;
+  hammerPosition = adcValKeyUp;
   hammerSpeed = 0.0;
 
   noteOn = false;
@@ -43,17 +43,17 @@ KeyHammer::KeyHammer (int(*adcFnPtr)(void), MidiSender* midiSender, int pitch, i
 
 void KeyHammer::updateADCParams () {
   // assume ADC values increase as the key is pressed
-  // i.e. sensorFullyOn > sensorFullyOff
+  // i.e. adcValKeyDown > adcValKeyUp
   // if this is not the case, flip the values
-  if (sensorFullyOn < sensorFullyOff) {
-    sensorFullyOn = -sensorFullyOn;
-    sensorFullyOff = -sensorFullyOff;
+  if (adcValKeyDown < adcValKeyUp) {
+    adcValKeyDown = -adcValKeyDown;
+    adcValKeyUp = -adcValKeyUp;
   }
   
   // update thresholds
-  noteOnThreshold = sensorFullyOn + 0.06 * (sensorFullyOn - sensorFullyOff);
-  noteOffThreshold = sensorFullyOn - 0.5 * (sensorFullyOn - sensorFullyOff);
-  keyResetThreshold = sensorFullyOn - 0.5 * (sensorFullyOn - sensorFullyOff);
+  noteOnThreshold = adcValKeyDown + 0.06 * (adcValKeyDown - adcValKeyUp);
+  noteOffThreshold = adcValKeyDown - 0.5 * (adcValKeyDown - adcValKeyUp);
+  keyResetThreshold = adcValKeyDown - 0.5 * (adcValKeyDown - adcValKeyUp);
 
   // gravity calculation
   // gravity in metres per microsecond^2
@@ -62,10 +62,10 @@ void KeyHammer::updateADCParams () {
   float gravity_mm = gravity_m * 1000;
   // gravity in adc bits per microsecond^2
   // hammer travel is in mm
-  gravity = gravity_mm  / hammer_travel * (sensorFullyOn - sensorFullyOff);
+  gravity = gravity_mm  / hammer_travel * (adcValKeyDown - adcValKeyUp);
 
   // max hammer speed measured in adc bits per microseconds
-  float maxHammerSpeed = (sensorFullyOn - sensorFullyOff) / (float)minPressUS;
+  float maxHammerSpeed = (adcValKeyDown - adcValKeyUp) / (float)minPressUS;
   hammerSpeedScaler = velocityMapLength / maxHammerSpeed;
 }
 
@@ -86,11 +86,11 @@ void KeyHammer::toggleCalibration () {
     c_down_sample_med = downStats.Quartile(2);
     c_down_sample_std = downStats.Standard_Deviation();
     if ((abs(c_up_sample_med - c_down_sample_med) > (20 * c_up_sample_std)) && (c_sample_t >= c_sample_n)) {
-      sensorFullyOn = c_down_sample_med;
-      sensorFullyOff = c_up_sample_med;
+      adcValKeyDown = c_down_sample_med;
+      adcValKeyUp = c_up_sample_med;
       updatedKeyDownThreshold = true;
     } else {
-      sensorFullyOff = c_up_sample_med;
+      adcValKeyUp = c_up_sample_med;
       updatedKeyDownThreshold = false;
     }
   updateADCParams();
@@ -161,7 +161,7 @@ void KeyHammer::updateHammer () {
           hammerPosition = keyPosition;
           // we could check to see if the hammer speed is greater then key speed, but probably not necessary
           // after all, the key as 'caught up' to the hammer
-          // if ((hammerSpeed > keySpeed) == (sensorFullyOff > sensorFullyOn)) {
+          // if ((hammerSpeed > keySpeed) == (adcValKeyUp > adcValKeyDown)) {
             // if (abs(hammerSpeed) < abs(keySpeed)) {
           hammerSpeed = keySpeed;
           // }
@@ -256,7 +256,7 @@ void KeyHammer::test () {
 }
 
 int KeyHammer::getAdcValue () {
-  if (sensorFullyOff < 0) {
+  if (adcValKeyUp < 0) {
     return -adcFnPtr();
   }
   return adcFnPtr();
@@ -337,8 +337,8 @@ void KeyHammer::printBuffers () {
 void KeyHammer::printKeyParams() {
   Serial.println("-- SETTINGS --");
   Serial.printf("pitch: %d\n", pitch);
-  Serial.printf("sensorFullyOn: %d\n", sensorFullyOn);
-  Serial.printf("sensorFullyOff: %d\n", sensorFullyOff);
+  Serial.printf("adcValKeyDown: %d\n", adcValKeyDown);
+  Serial.printf("adcValKeyUp: %d\n", adcValKeyUp);
   Serial.printf("noteOnThreshold: %d\n", noteOnThreshold);
   Serial.printf("noteOffThreshold: %d\n", noteOffThreshold);
   Serial.printf("keyResetThreshold: %d\n", keyResetThreshold);

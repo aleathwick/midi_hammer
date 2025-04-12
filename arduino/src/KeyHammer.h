@@ -47,12 +47,12 @@ class KeyHammer
 
     bool enabled = true;
 
-    // define the range of the sensors, with sensorFullyOn being the key fully depressed
-  // this will work regardless of sensorFullyOn < sensorFullyOff or sensorFullyOff < sensorFullyOn
+    // define the range of the sensors, with adcValKeyDown being the key fully depressed
+  // this will work regardless of adcValKeyDown < adcValKeyUp or adcValKeyUp < adcValKeyDown
   protected:
     MidiSender* midiSender;
-    int sensorFullyOn;
-    int sensorFullyOff;
+    int adcValKeyDown;
+    int adcValKeyUp;
     float keyPosition;
     // key and hammer speeds are measured in adc bits per microsecond
     float keySpeed;
@@ -136,7 +136,7 @@ class KeyHammer
   
 
   public:
-    KeyHammer(int(*adcFnPtr)(void), MidiSender* midiSender,int pitch, int sensorFullyOn, int sensorFullyOff, float hammer_travel, int minPressUS);
+    KeyHammer(int(*adcFnPtr)(void), MidiSender* midiSender,int pitch, int adcValKeyDown, int adcValKeyUp, float hammer_travel, int minPressUS);
     void step();
     // operation mode switches between operation as a hammer simulation key, a key, or a pedal
     int getAdcValue(void);

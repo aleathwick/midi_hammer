@@ -180,6 +180,8 @@ void KeyHammer::checkNoteOn () {
     // sometimes negative values for velocityIndex occur, probably due to a mismatch between thresholds and actual ADC range
     velocityIndex = max(velocityIndex, 0);
     midiSender->sendNoteOn(pitch, velocityMap[velocityIndex], 2);
+    // useful when testing
+    // midiSender->sendNoteOn(50 + noteCount % 12, 64, 2);
     noteOn = true;
     keyArmed = false;
     if (printMode == PRINT_NOTES){

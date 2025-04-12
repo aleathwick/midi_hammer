@@ -157,6 +157,9 @@ class KeyHammer
     float getHammerSpeed() const { return hammerSpeed; }
     int getRawADC() const { return rawADC; }
     int getElapsedUS() const { return elapsedUSBuffer.last(); }
+    
+    void setPrintMode(PrintMode mode) { printMode = mode; }
+
     // int getPitch() const { return pitch; }
     int pitch;
 

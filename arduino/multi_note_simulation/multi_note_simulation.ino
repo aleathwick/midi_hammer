@@ -192,6 +192,11 @@ void changePrintMode (const char *command) {
       pausePrintStream();
     }
     updateKeyPrintModes();
+  } 
+  else {
+    Serial.println("Current print mode: ");
+    Serial.println(printModeNames[keyPrintMode]);
+    pausePrintStream();
   }
 }
 
@@ -234,8 +239,7 @@ void setPrintKey (const char *command) {
     updateKeyPrintModes();
   }
   else {
-    Serial.println("No second argument, required by command: ");
-    Serial.println(command);
+    Serial.printf("printKey = %d (pitch %d), printAllKeys = %d, with printMode = %s\n", printkey, keys[printkey].pitch, printAllKeys, printModeNames[keyPrintMode]);
     pausePrintStream();
 
   }

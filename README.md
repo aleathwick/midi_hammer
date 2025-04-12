@@ -73,6 +73,11 @@ arduino-cli lib install "elapsedMillis"
 arduino-cli lib install "CircularBuffer"
 # https://github.com/akkoyun/Statistical
 arduino-cli lib install "Statistical"
+# https://github.com/thomasfredericks/Bounce2
+arduino-cli lib install "Bounce2"
+# https://github.com/kroimon/Arduino-SerialCommand/tree/master
+arduino-cli config set library.enable_unsafe_install true
+arduino-cli lib install --git-url https://github.com/kroimon/Arduino-SerialCommand.git
 ```
 
 #### Compilation
@@ -121,6 +126,9 @@ arduino-cli core upgrade
     - share filter values between keys
     - choose filter based on total elapsed time target? E.g. 3000us.
   - interactive serial control
+    - enable/disable keys
+    - change simulation params for specific keys / all keys? 
+    - change length of loop? i.e. minimum time for one iteration of all keys
   - calibration
   - store params on SD card
   - Simultaneous dual ADC read (teensy)

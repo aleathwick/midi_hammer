@@ -15,8 +15,8 @@ int velocityMap[velocityMapLength];
 
 
 // use a constructor initializer list for adc, otherwise the reference won't work
-KeyHammer::KeyHammer (int(*adcFnPtr)(void), MidiSender* midiSender, int pitch, char operationMode='h', int sensorFullyOn=430, int sensorFullyOff=50, float hammer_travel=4.5, int minPressUS=8500)
-  : adcFnPtr(adcFnPtr), midiSender(midiSender), pitch(pitch), operationMode(operationMode), sensorFullyOn(sensorFullyOn), sensorFullyOff(sensorFullyOff), hammer_travel(hammer_travel), minPressUS(minPressUS) {
+KeyHammer::KeyHammer (int(*adcFnPtr)(void), MidiSender* midiSender, int pitch, int sensorFullyOn=430, int sensorFullyOff=50, float hammer_travel=4.5, int minPressUS=8500)
+  : adcFnPtr(adcFnPtr), midiSender(midiSender), pitch(pitch), sensorFullyOn(sensorFullyOn), sensorFullyOff(sensorFullyOff), hammer_travel(hammer_travel), minPressUS(minPressUS) {
   
   updateADCParams();
   
@@ -33,11 +33,6 @@ KeyHammer::KeyHammer (int(*adcFnPtr)(void), MidiSender* midiSender, int pitch, c
   scaleFilterWeights(keyPosFilter);
 
   elapsedUS = 0;
-
-  lastControlValue = 0;
-  controlValue = 0;
-  // default to 64 (sustain); manually change if necessary
-  controlNumber = 64;
 
   // initialize velocity map
   if (velocityMap[velocityMapLength-1] == 0) {
@@ -77,7 +72,7 @@ void KeyHammer::updateADCParams () {
 
 void KeyHammer::toggleCalibration () {
   if (! calibrating) {
-    c_mode = UP;
+    c_mode = CalibMode::UP;
     calibrating = true;
     c_elapsedMS = 0;
     c_sample_t = 0;
@@ -93,8 +88,10 @@ void KeyHammer::toggleCalibration () {
     if (abs(c_up_sample_med - c_down_sample_med) > (50 * c_up_sample_std)) {
       sensorFullyOn = c_down_sample_med;
       sensorFullyOff = c_up_sample_med;
+      updatedKeyDownThreshold = true;
     } else {
       sensorFullyOff = c_up_sample_med;
+      updatedKeyDownThreshold = false;
     }
   updateADCParams();
 }
@@ -115,7 +112,7 @@ void KeyHammer::calibrationSample () {
 void KeyHammer::stepCalibration () {
   updateKey();
   updateElapsed();
-  if (c_mode == UP) {
+  if (c_mode == CalibMode::UP) {
     calibrationSample();
     if (c_elapsedMS > 1000) {
       // use Array_Stats to calculate statistics
@@ -123,7 +120,7 @@ void KeyHammer::stepCalibration () {
       //  in later versions of Statistical, this is median()
       c_up_sample_med = upStats.Quartile(2);
       c_up_sample_std = upStats.Standard_Deviation();
-      c_mode = DOWN;
+      c_mode = CalibMode::DOWN;
       c_sample_t = 0;
     }
   } else if (
@@ -239,41 +236,17 @@ void KeyHammer::stepHammer () {
 }
 
 
-void KeyHammer::stepPedal () {
-  updateKey();
-  updateElapsed();
-  lastControlValue = controlValue;
-  // this could be sped up by precomputing the possible values
-  controlValue = (int)((keyPosition - sensorFullyOff) / float(sensorFullyOn - sensorFullyOff) * 127);
-  if (controlValue != lastControlValue) {
-    // control numbers:
-    // 1 = Modulation wheel
-    // 2 = Breath Control
-    // 7 = Volume
-    // 10 = Pan
-    // 11 = Expression
-    // 64 = Sustain Pedal (on/off)
-    // 65 = Portamento (on/off)
-    // 67 = Soft Pedal
-    // 71 = Resonance (filter)
-    // 74 = Frequency Cutoff (filter)
-    midiSender->sendControlChange(controlNumber, controlValue, 2);
-  }
-  elapsedUS = 0;
-}
-
 void KeyHammer::step () {
-  iterationBuffer.push(iteration);
-  if (calibrating) {
-    stepCalibration();
-  } else if (operationMode=='h')
-  {
-    stepHammer();
-  } else if (operationMode=='p')
-  {
-    stepPedal();
+  if (enabled) {
+    iterationBuffer.push(iteration);
+    if (calibrating) {
+      stepCalibration();
+    } else
+    {
+      stepHammer();
+    }
+    iteration++;
   }
-  iteration++;
 }
 
 void KeyHammer::test () {
@@ -325,21 +298,6 @@ float KeyHammer::applyFilter(CircularBuffer<T, bufferLength>& buffer, float (&fi
   return filteredValue;
 }
 
-void KeyHammer::printState () {
-  if (operationMode=='p'){
-    Serial.printf("key_%d:%f,", pitch, keyPosition);
-    Serial.printf("rawADC_%d:%d,", pitch, rawADC);
-    Serial.printf("elapsedUS_%d:%d,", pitch, elapsedUSBuffer.last());
-    Serial.printf("controlValue_%d:%d,", pitch, controlValue);
-  } else if (operationMode=='h'){
-    // Serial.printf("%d %f %f ", keyPosition, keySpeed, hammerSpeed);
-    Serial.printf("hammer_%d:%f,", pitch, hammerPosition);
-    Serial.printf("rawADC_%d:%d,", pitch, rawADC);
-    Serial.printf("hammerSpeed_%d:%f,", pitch, hammerSpeed);
-    Serial.printf("elapsedUS_%d:%d,", pitch, elapsedUSBuffer.last());
-  }
-
-}
 
 void KeyHammer::printBuffers () {
   int delayUS = 15;
@@ -372,4 +330,25 @@ void KeyHammer::printBuffers () {
       delayMicroseconds(delayUS);
       Serial.flush();
     }
+}
+
+void KeyHammer::printKeyParams() {
+  Serial.println("-- SETTINGS --");
+  Serial.printf("pitch: %d\n", pitch);
+  Serial.printf("sensorFullyOn: %d\n", sensorFullyOn);
+  Serial.printf("sensorFullyOff: %d\n", sensorFullyOff);
+  Serial.printf("noteOnThreshold: %d\n", noteOnThreshold);
+  Serial.printf("noteOffThreshold: %d\n", noteOffThreshold);
+  Serial.printf("keyResetThreshold: %d\n", keyResetThreshold);
+  // results from calibration
+  Serial.println("-- CALIBRATION --");
+  Serial.printf("c_up_sample_med: %d \n", c_up_sample_med);
+  Serial.printf("c_up_sample_std: %f \n", c_up_sample_std);
+  Serial.printf("c_down_sample_med: %d \n", c_down_sample_med);
+  Serial.printf("c_down_sample_std: %f \n", c_down_sample_std);
+  Serial.printf("samples collected: %d \n", c_sample_t);
+  Serial.printf("samples used: %d \n", c_sample_n);
+  //updatedKeyDownThreshold
+  Serial.printf("updatedKeyDownThreshold: %d \n", updatedKeyDownThreshold);
+  Serial.flush();
 }

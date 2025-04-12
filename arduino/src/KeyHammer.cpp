@@ -235,14 +235,16 @@ void KeyHammer::stepHammer () {
 
 
 void KeyHammer::step () {
-  iterationBuffer.push(iteration);
-  if (calibrating) {
-    stepCalibration();
-  } else
-  {
-    stepHammer();
+  if (enabled) {
+    iterationBuffer.push(iteration);
+    if (calibrating) {
+      stepCalibration();
+    } else
+    {
+      stepHammer();
+    }
+    iteration++;
   }
-  iteration++;
 }
 
 void KeyHammer::test () {

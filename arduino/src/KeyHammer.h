@@ -45,6 +45,8 @@ class KeyHammer
        0.00309598,  0.00515996,  0.00722394,  0.00928793,  0.01135191,
        0.01341589,  0.01547988,  0.01754386};
 
+    bool enabled = true;
+
     // define the range of the sensors, with sensorFullyOn being the key fully depressed
   // this will work regardless of sensorFullyOn < sensorFullyOff or sensorFullyOff < sensorFullyOn
   protected:
@@ -162,5 +164,9 @@ class KeyHammer
     // int getPitch() const { return pitch; }
     int pitch;
 
+    // functions for enabling/disabling the key
+    void enable() { enabled = true; }
+    void disable() { enabled = false; }
+    bool isEnabled() const { return enabled; }
 
 };

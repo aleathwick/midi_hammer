@@ -136,6 +136,21 @@ Bounce2::Button b_toggle_calibration = Bounce2::Button();
 
 SerialCommand sCmd;
 
+// help string, printed with "help" command
+const char* helpString = "Commands:\n"
+                          "c: toggle calibration\n"
+                          "pm: change print mode (stream, buffers, notes, none)\n"
+                          "pk: set print key (0-(nKeys-1), +, -)\n"
+                          "pka: toggle print attributes (applicable to stream mode)\n"
+                          "pf: set print frequency (ms)\n"
+                          "h / help: show this message\n"
+                          ;
+                          
+void printHelp() {
+  Serial.print("\n");
+  Serial.println(helpString);
+  pausePrintStream();
+}
 
 void setup() {
   Serial.begin(57600);
@@ -145,6 +160,8 @@ void setup() {
   b_toggle_calibration.interval(5);
   b_toggle_calibration.setPressedState(LOW); 
 
+  sCmd.addCommand("help", printHelp);
+  sCmd.addCommand("h", printHelp);
   sCmd.addCommand("c", toggleCalibration);
   sCmd.addCommand("pm", changePrintMode);
   sCmd.addCommand("pk", setPrintKey);

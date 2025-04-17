@@ -102,7 +102,9 @@ void DualAdcManager::updateReadings(int settleDelayUS) {
     ADC::Sync_result result = _adc->analogSynchronizedRead(_signalPins[_currentSignalPinIndex0], _signalPins[_currentSignalPinIndex1]);
     _lastValue0 = (int)result.result_adc0;
     _lastValue1 = (int)result.result_adc1;
-
+    // non-synchronized read:
+    // _lastValue0 = _adc->adc0->analogRead(_signalPins[_currentSignalPinIndex0]);
+    // _lastValue1 = _adc->adc1->analogRead(_signalPins[_currentSignalPinIndex1]);
     _adcNeedsUpdate = false;
     _lastReadTimeUS = 0; // Reset elapsed time
 }

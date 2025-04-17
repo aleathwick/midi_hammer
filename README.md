@@ -78,6 +78,8 @@ arduino-cli lib install "Bounce2"
 # https://github.com/kroimon/Arduino-SerialCommand/tree/master
 arduino-cli config set library.enable_unsafe_install true
 arduino-cli lib install --git-url https://github.com/kroimon/Arduino-SerialCommand.git
+# https://github.com/michalmonday/CSV-Parser-for-Arduino
+arduino-cli lib install "CSV Parser"
 ```
 
 #### Compilation

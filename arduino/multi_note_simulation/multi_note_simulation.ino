@@ -21,7 +21,7 @@ To do:
 #include <Bounce2.h>
 #include "KeyHammer.h"
 #include "Pedal.h"
-#include "ADC.h"
+#include "DualAdcManager.h"
 #include <ParamHandler.h>
 
 // board specific imports and midi setup
@@ -44,37 +44,17 @@ To do:
   int calibrationPin = 0;
 
 #elif defined(TEENSY)
-  const int addressPins[] = {35, 34, 33};
+  const int addressPins0[] = {35, 34, 33};
+  // second group of address pins, for the second set of muxes
+  const int addressPins1[] = {1, 2, 3};
   const int enablePins[] = {39};
   int signalPins[] = {40, 15}; // A1
   int calibrationPin = 14;
+  DualAdcManager dualAdcManager;
   
-  ADC *adc = new ADC(); // adc object;
-
   #endif
 
 int nEnable = sizeof(enablePins) / sizeof(enablePins[0]);
-
-// function to update the states of the address and enable pins
-void updateMuxAddress(int address_0, int address_1, int address_2) {
-  // update address pins
-  digitalWrite(addressPins[0], address_0);
-  digitalWrite(addressPins[1], address_1);
-  digitalWrite(addressPins[2], address_2);
-}
-
-// Function to read ADC value for a specific configuration
-int readAdc(int signalPin, int address_0, int address_1, int address_2, int delay) {
-  updateMuxAddress(address_0, address_1, address_2);
-  // sleep for a bit to allow the mux to settle
-  // 1us is enough over 30cm long (26awg) cables and 5v powered 74hc4051, 3v powered 49e sensors
-  // 2us needed for 3v powered hc4051
-  // 5 or 6us needed for 3v powered 74hc4051 with 60cm long cables
-  delayMicroseconds(delay);
-  // delayNanoseconds only works on teensy
-  // delayNanoseconds(1000);
-  return adc->adc1->analogRead(signalPin);
-}
 
 // can turn to int like so: int micros = elapsed[i][j];
 // and reset to zero: elapsed[i][j] = 0;
@@ -116,20 +96,26 @@ ParamHandler ph;
 #include "MidiSenderDummy.h"
 MidiSenderDummy midiSenderDummy;
 int settle_delay = 4;
+// calling readDualGetAdcValue0(0, 1, 3, 3, settle_delay) will read adc values from pins
+// 0 and 1, using adc0 and adc1, with multiplexers both sent to input 3, and will return
+// the value from adc0 (reading occurs simultaneously)
+// subsequently calling readDualGetAdcValue1(0, 1, 3, 3, settle_delay) will return the cached
+// value from adc1, from the previous read without needing to set the muxes again
+// the cached value is used since the configuration is the same
 KeyHammer keys[] = {
-  { []() -> int { return readAdc(signalPins[0], 0, 1, 1, settle_delay); }, &midiSender, 49, adcValKeyDown, adcValKeyUp , hammer_travel, minPressUS},
-  { []() -> int { return readAdc(signalPins[0], 0, 1, 0, settle_delay); }, &midiSender, 50, adcValKeyDown, adcValKeyUp , hammer_travel, minPressUS},
-  { []() -> int { return readAdc(signalPins[0], 0, 0, 1, settle_delay); }, &midiSender, 51, adcValKeyDown, adcValKeyUp , hammer_travel, minPressUS},
-  { []() -> int { return readAdc(signalPins[0], 0, 0, 0, settle_delay); }, &midiSender, 52, adcValKeyDown, adcValKeyUp , hammer_travel, minPressUS},
-  { []() -> int { return readAdc(signalPins[1], 0, 1, 1, settle_delay); }, &midiSenderDummy, 61, adcValKeyDown, adcValKeyUp , hammer_travel, minPressUS},
-  { []() -> int { return readAdc(signalPins[1], 0, 1, 0, settle_delay); }, &midiSenderDummy, 62, adcValKeyDown, adcValKeyUp , hammer_travel, minPressUS},
-  { []() -> int { return readAdc(signalPins[1], 0, 0, 1, settle_delay); }, &midiSenderDummy, 63, adcValKeyDown, adcValKeyUp , hammer_travel, minPressUS},
-  { []() -> int { return readAdc(signalPins[1], 0, 0, 0, settle_delay); }, &midiSenderDummy, 64, adcValKeyDown, adcValKeyUp , hammer_travel, minPressUS}
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(0, 1, 3, 3, settle_delay); }, &midiSender, 49, adcValKeyDown, adcValKeyUp , hammer_travel, minPressUS},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(0, 1, 3, 3, settle_delay); }, &midiSenderDummy, 61, adcValKeyDown, adcValKeyUp , hammer_travel, minPressUS},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(0, 1, 2, 2, settle_delay); }, &midiSender, 50, adcValKeyDown, adcValKeyUp , hammer_travel, minPressUS},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(0, 1, 2, 2, settle_delay); }, &midiSenderDummy, 62, adcValKeyDown, adcValKeyUp , hammer_travel, minPressUS},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(0, 1, 1, 1, settle_delay); }, &midiSender, 51, adcValKeyDown, adcValKeyUp , hammer_travel, minPressUS},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(0, 1, 1, 1, settle_delay); }, &midiSenderDummy, 63, adcValKeyDown, adcValKeyUp , hammer_travel, minPressUS},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(0, 1, 0, 0, settle_delay); }, &midiSender, 52, adcValKeyDown, adcValKeyUp , hammer_travel, minPressUS},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(0, 1, 0, 0, settle_delay); }, &midiSenderDummy, 64, adcValKeyDown, adcValKeyUp , hammer_travel, minPressUS}
 };
 
-int nPedals = 1;
+int nPedals = 0;
 Pedal pedals[] = {
-  { []() -> int { return readAdc(signalPins[0], 1, 0, 0, settle_delay); }, &midiSender, 64, 584, 534 },
+  // { []() -> int { return dualAdcManager.readDualGetAdcValue0(0, 1, 4, 3, settle_delay); }, &midiSender, 64, 584, 534 },
 };
 
 int printkey = 0;
@@ -196,31 +182,8 @@ void setup() {
   for (int i = 0; i < nEnable; i++) {
     digitalWrite(enablePins[i], LOW);
   }
-
-  // ADC settings
-  #ifdef TEENSY
-    // default is averaging 4 samples, which takes 16-17us
-    // takes around 7us for 1 sample
-    // analogReadAveraging(1);
-    // analogReadResolution(12);
-
-    adc->adc1->setAveraging(1);  // set number of averages
-    adc->adc0->setAveraging(1);  // set number of averages
-  // adc->adc1->setResolution(16); // set bits of resolution
-
-  // it can be any of the ADC_CONVERSION_SPEED enum: VERY_LOW_SPEED, LOW_SPEED,
-  // MED_SPEED, HIGH_SPEED_16BITS, HIGH_SPEED or VERY_HIGH_SPEED see the
-  // documentation for more information additionally the conversion speed can
-  // also be ADACK_2_4, ADACK_4_0, ADACK_5_2 and ADACK_6_2, where the numbers
-  // are the frequency of the ADC clock in MHz and are independent on the bus
-  // speed.
-  adc->adc1->setConversionSpeed(ADC_CONVERSION_SPEED::VERY_HIGH_SPEED); // change the conversion speed
-  adc->adc0->setConversionSpeed(ADC_CONVERSION_SPEED::VERY_HIGH_SPEED); // change the conversion speed
-  // it can be any of the ADC_MED_SPEED enum: VERY_LOW_SPEED, LOW_SPEED,
-  // MED_SPEED, HIGH_SPEED or VERY_HIGH_SPEED
-  adc->adc1->setSamplingSpeed(ADC_SAMPLING_SPEED::VERY_HIGH_SPEED); 
-  adc->adc0->setSamplingSpeed(ADC_SAMPLING_SPEED::VERY_HIGH_SPEED); 
-  #endif
+  int nAddressPins = sizeof(addressPins0) / sizeof(addressPins0[0]);
+  dualAdcManager.begin(addressPins0, addressPins1, signalPins, nAddressPins);
 }
 
 // can do setup on the other core too

@@ -4,7 +4,6 @@
 // Constructor
 DualAdcManager::DualAdcManager() {
     _adcNeedsUpdate = true;
-    _numSignalPins = 0;
     
     #ifdef TEENSY
     _adc = NULL;
@@ -13,18 +12,15 @@ DualAdcManager::DualAdcManager() {
 
 // Initialize the ADC manager with specific pins
 void DualAdcManager::begin(int addressPins0[], int addressPins1[], 
-                            int signalPins[]) {
+                            int signalPins[], int numSignalPins) {
     // Limit to maximum supported pins
-    // _numSignalPins = min(numSignalPins, (uint8_t)MAX_SIGNAL_PINS);
-    // or...
-    _numSignalPins = sizeof(signalPins) / sizeof(signalPins[0]);
-    // Copy pin assignments
+    numSignalPins = min(numSignalPins, MAX_SIGNAL_PINS);
     for(uint8_t i = 0; i < N_ADDRESS_PINS; i++) {
         _addressPins0[i] = addressPins0[i];
         _addressPins1[i] = addressPins1[i];
     }
     
-    for(uint8_t i = 0; i < _numSignalPins; i++) {
+    for(uint8_t i = 0; i < numSignalPins; i++) {
         _signalPins[i] = signalPins[i];
     }
     

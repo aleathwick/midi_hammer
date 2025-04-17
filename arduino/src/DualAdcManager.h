@@ -93,7 +93,7 @@ public:
     DualAdcManager();
     // Initialize the ADC manager with specific pins
     void begin(int addressPins0[], int addressPins1[], 
-               int signalPins[]);
+               int signalPins[], int _numSignalPins);
     
     // Set mux configuration using an array of address values
     void setMuxConfig(int muxAddr0, int muxAddr1);

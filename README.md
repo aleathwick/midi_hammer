@@ -131,10 +131,6 @@ arduino-cli core upgrade
     - enable/disable keys
     - change simulation params for specific keys / all keys? 
     - change length of loop? i.e. minimum time for one iteration of all keys
-  - calibration
-  - store params on SD card
-  - Simultaneous dual ADC read (teensy)
   - pedal
-    - sub class for pedal mode, rather than one class with different modes?
     - add binary version of pedal
 

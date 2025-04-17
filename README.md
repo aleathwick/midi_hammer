@@ -1,7 +1,7 @@
 # midi_hammer
 This repository contains firmware for my DIY digital piano project. Some videos of prototypes can be found here:  
 - [Latest prototype (5 keys)](https://youtu.be/U8PAwi5l6Sw)
-- [24 key prototype](https://youtu.be/tgWXtYCHDI4) - an older prototype that uses more time intensive construction techniques that the latest 5 key prototype.
+- [24 key prototype](https://youtu.be/tgWXtYCHDI4) - an older prototype that used more time-intensive construction techniques.
 
 ## Overview
 Most of my prototypes so far use a simple lever action (like a see-saw - a weight on one end, finger on the other). Key positions are measured by hall effect sensors connected to a microcontroller (raspberry pico or teensy). To allow for half-presses etc., the microntroller firmware simulates a hammer, the position/speed of which is what generates note-ons sent over MIDI to a computer running virtual piano software like pianoteq.  

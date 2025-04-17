@@ -169,10 +169,12 @@ public:
         int settleDelayUS
     );
 
+    // getter functions for retrieving the last (cached) ADC values
     int getAdcValue1() { return _lastValue0; }
     int getAdcValue2() { return _lastValue1; }
     
 
     // Function to create a reader for a single ADC channel
+    // Not implemented yet
     int (*createAdcReader(uint8_t adcPinIndex0, uint8_t adcPinIndex1, int addressValues[], int settleDelayUS))();
 };

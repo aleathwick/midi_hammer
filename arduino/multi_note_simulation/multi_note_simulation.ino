@@ -1,16 +1,3 @@
-/*
-To do:
-- Add midisender to KeyHammer
-- Basic adc read with teensy, based on cpy thresholds
-- Default midisender, and default arguments, modified by subclassing keyhammer? For ease of use
-- Tidy up cpp/header files
-- Bring in other changes from cpy
-- Calibration code
-- Benchmark
-- SG filter
-
-*/
-
 #include "config.h"
 
 // elapsedMillis: https://github.com/pfeerick/elapsedMillis

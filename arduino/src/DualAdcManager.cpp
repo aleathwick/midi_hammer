@@ -33,7 +33,7 @@ void DualAdcManager::begin(int addressPins0[], int addressPins1[],
     }
     
     // Configure signal pins as inputs
-    for(uint8_t i = 0; i < _numSignalPins; i++) {
+    for(uint8_t i = 0; i < numSignalPins; i++) {
         pinMode(_signalPins[i], INPUT);
     }
     

@@ -64,9 +64,6 @@ private:
     // Number of address pins
     uint8_t _numAddressPins;
     
-    // Number of configured pins
-    uint8_t _numSignalPins;
-    
     int _lastValue0;
     int _lastValue1;
     int _currentSignalPinIndex0;
@@ -93,7 +90,7 @@ public:
     DualAdcManager();
     // Initialize the ADC manager with specific pins
     void begin(int addressPins0[], int addressPins1[], 
-               int signalPins[], int _numSignalPins);
+               int signalPins[], int numSignalPins);
     
     // Set mux configuration using an array of address values
     void setMuxConfig(int muxAddr0, int muxAddr1);

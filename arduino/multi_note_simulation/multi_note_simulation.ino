@@ -55,9 +55,6 @@ To do:
 
 int nEnable = sizeof(enablePins) / sizeof(enablePins[0]);
 
-// function pointer type for ADC reading functions
-typedef int (*ReadAdcFn)();
-
 // function to update the states of the address and enable pins
 void updateMuxAddress(int address_0, int address_1, int address_2) {
   // update address pins

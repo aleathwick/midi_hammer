@@ -78,6 +78,8 @@ arduino-cli lib install "Bounce2"
 # https://github.com/kroimon/Arduino-SerialCommand/tree/master
 arduino-cli config set library.enable_unsafe_install true
 arduino-cli lib install --git-url https://github.com/kroimon/Arduino-SerialCommand.git
+# https://github.com/michalmonday/CSV-Parser-for-Arduino
+arduino-cli lib install "CSV Parser"
 ```
 
 #### Compilation
@@ -129,10 +131,6 @@ arduino-cli core upgrade
     - enable/disable keys
     - change simulation params for specific keys / all keys? 
     - change length of loop? i.e. minimum time for one iteration of all keys
-  - calibration
-  - store params on SD card
-  - Simultaneous dual ADC read (teensy)
   - pedal
-    - sub class for pedal mode, rather than one class with different modes?
     - add binary version of pedal
 

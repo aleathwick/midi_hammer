@@ -1,22 +1,28 @@
 # midi_hammer
-Raspberry pico firmware for measuring piano key positions, using those measurements to simulate hammer movements, and sending resultant velocity information over usb midi.  
-Videos of prototypes can be found here:  
-- [Latest prototype (5 keys)](https://youtu.be/U8PAwi5l6Sw)  
-- [24 key prototype](https://youtu.be/tgWXtYCHDI4)
+This repository contains firmware for my DIY digital piano project. Some videos of prototypes can be found here:  
+- [Latest prototype (5 keys)](https://youtu.be/U8PAwi5l6Sw)
+- [24 key prototype](https://youtu.be/tgWXtYCHDI4) - an older prototype that uses more time intensive construction techniques that the latest 5 key prototype.
 
-## Arduino
-Uses [Earle Philhower's Raspberry Pico Arduino core](https://github.com/earlephilhower/arduino-pico), using Adafruit TinyUSB for usb midi.  
-There is code for:
-- Reading sensors from multiple mcp3008 or mcp3208
-- Sending notes over usb midi  
+## Overview
+Most of my prototypes so far use a simple lever action (like a see-saw - a weight on one end, finger on the other). Key positions are measured by hall effect sensors connected to a microcontroller (raspberry pico or teensy). To allow for half-presses etc., the microntroller firmware simulates a hammer, the position/speed of which is what generates note-ons sent over MIDI to a computer running virtual piano software like pianoteq.  
 
-The KeyHammer class encapsulates the logic required to run simulation. It can run in two modes: hammer or pedal. In hammer mode, a hammer is simulated in response to ADC values which are assumed to come from a key (or a foot pedal, for triggering drums). In pedal mode, values are read from ADC and directly turned into midi values, useful for controlling sustain pedal or other parameters.  
-The latest firmware for powering a digital piano sits in `arduino/multi_note_simulation`.  
-Pedal firmware sits in `arduino/pedal_unit`.  
+My original goal was to create a digital piano with narrower keys (i.e. smaller octave). Since experimenting with simple lever actions, which of course have very different properties to 'real' hammer actions (most importantly, different leverage and as a result lower inertia / dynamic touchweight), I've become interested in changing the other properties of the piano action to suit my liking, and now my goal is to create an instrument that differs from the piano in the following regards:  
+- Narrower keys
+- Less inertia
+- Shallower key dip  
 
-## Circuit Python
-This was the initial prototype. There is working code for reading two sensors via mcp3008, and sending resultant velocities over usb midi.  
+## Electronics
+Originally this project used the raspberry pico, reading MCP3008 external ADCs. Since then I've transitioned to using the teensy 4.1, using the teensy's internal ADC with multiplexers, which is a lot faster (i.e. I can process all keys faster, working out to <200us for 88 keys).  
 
+## Code
+Arduino code is arranged as follows:
+- `arduino/multi_note_simulation` - main firmware (currently for teensy, rpico support is broken right now), which contains a convenient serial command interface for controlling printing, calibration, and writing calibrated parameters to the SD card. Other funcationality is achieved utilising the below classes.  
+- `arduino/src` contains various classes:
+  - `DualAdcManager` - Abstracts the logic for automatically utilising the teensy's dual ADC's simultaneously whenever possible.
+  - `KeyHammer` - Contains the logic for simulating a hammer action based on key positions. 
+  - `MidiSender` - Abstract base class used by `MidiSenderPico` and `MidiSenderTeensy`, to provide a consistent interface to  MIDI communication.
+  - `ParamHandler` - Handles storing parameters on an SD card, so that once keys are calibrated, the calibrated parameters can be re-used after power-cycling.
+  - `Pedal` - subclass of `KeyHammer` for use with pedals. 
 
 ## Notes to self
 ### Arduino plotting

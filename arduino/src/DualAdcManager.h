@@ -49,7 +49,15 @@ const int MUX_ADDRESSES[][N_ADDRESS_PINS] = {
 };
 #endif
 
-// should really make this a singleton class
+/**
+ * @brief Manages teensy dual ADC usage in conjunction with multiplexers
+ * 
+ * This class handles two sets of mux address pins, and simultaneous reading from two
+ * ADC channels. The idea is to use two ADCs to read from two groups of muxes at the
+ * same time.
+ * The second value can be cached, and used if the configuration is the same when the
+ * value for the second ADC is requested.
+ */
 class DualAdcManager {
 private:
     
@@ -88,21 +96,58 @@ private:
     
 public:
     DualAdcManager();
-    // Initialize the ADC manager with specific pins
+    /**
+     * @brief Initialize the ADC manager with address and signal pins
+     * 
+     * @param addressPins0 Array of pins connected to address lines of first multiplexer(s)
+     * @param addressPins1 Array of pins connected to address lines of second multiplexer(s)
+     * @param signalPins Array of pins connected to ADC inputs
+     * @param numSignalPins Number of signal pins
+     */
     void begin(int addressPins0[], int addressPins1[], 
                int signalPins[], int numSignalPins);
     
-    // Set mux configuration using an array of address values
+    
+    /**
+     * @brief Set the configuration (chosen address) of the multiplexers
+     * 
+     * @param muxAddr0 Input channel number of the first multiplexer(s)
+     * @param muxAddr1 Input channel number of the second multiplexer(s)
+     */
     void setMuxConfig(int muxAddr0, int muxAddr1);
 
-    // Set ADC pin configuration (which pins to read)
+    /**
+     * @brief Choose (by index) the ADC pins to read
+     * 
+     * @param signalPinIndex0 Index of pin to read using ADC0
+     * @param signalPinIndex1 Index of pin to read using ADC1
+     *  */ 
     void setAdcPinConfig(int signalPinIndex0, int signalPinIndex1);
     
-    // Perform readings if needed
+    /**
+     * @brief Update ADC readings using both ADCs simulataneously
+     * 
+     * This function will always read from both ADCs, even if the config is the same.
+     * readDualGetAdcValue0 and readDualGetAdcValue1 will only read from the ADC if the 
+     * configuration has changed, or if the last read was more than _validReadDurationUS ago.
+     * 
+     * @param settleDelayUS Delay in microseconds to wait for the ADC to settle
+     */
     void updateReadings(int settleDelayUS);
     
-    // Get ADC value for specific channel and configuration
-    // Reads values for two pins, returns the first pin
+    /**
+     * @brief Read from both ADCs (if update required) and get the ADC value for ADC0
+     * 
+     * If values have recently been read with the same configuration, the cached value will be
+     * returned. This allows two ADC values to be read at the same time, and the second value
+     * used on the next read.
+     * 
+     * @param adcPinIndex0 Index of pin to read using ADC0
+     * @param adcPinIndex1 Index of pin to read using ADC1
+     * @param muxAddr0 Input channel number of the first multiplexer(s)
+     * @param muxAddr1 Input channel number of the second multiplexer(s)
+     * @param settleDelayUS Delay in microseconds to wait for the ADC to settle
+     */
     int readDualGetAdcValue0(
         uint8_t adcPinIndex0,
         uint8_t adcPinIndex1,
@@ -110,6 +155,12 @@ public:
         int muxAddr1,
         int settleDelayUS
     );
+   /**
+     * @brief Read from both ADCs (if update required) and get the ADC value for ADC1
+     * 
+     * See readDualGetAdcValue0 for details. This function is the same as readDualGetAdcValue0,
+     * but returns the value for ADC1.
+     */
     int readDualGetAdcValue1(
         uint8_t adcPinIndex0,
         uint8_t adcPinIndex1,

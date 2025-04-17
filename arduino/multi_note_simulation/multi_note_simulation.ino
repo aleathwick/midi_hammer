@@ -22,6 +22,7 @@ To do:
 #include "KeyHammer.h"
 #include "Pedal.h"
 #include "ADC.h"
+#include <ParamHandler.h>
 
 // board specific imports and midi setup
 #ifdef PICO
@@ -109,19 +110,24 @@ const int n_keys = 8;
 // specify constant int value for min_key_press shared across all keys
 const int minPressUS = 4000;
 const float hammer_travel = 20;
+// default vals, but will set these during calibration / read in saved calibrated values from SD card
+int adcValKeyDown = 560;
+int adcValKeyUp = 450;
+// initialise a ParamHandler object for loading parameters from SD card
+ParamHandler ph;
 
 #include "MidiSenderDummy.h"
 MidiSenderDummy midiSenderDummy;
 int settle_delay = 4;
 KeyHammer keys[] = {
-  { []() -> int { return readAdc(signalPins[0], 0, 1, 1, settle_delay); }, &midiSender, 49, 610, 5000 , hammer_travel, minPressUS},
-  { []() -> int { return readAdc(signalPins[0], 0, 1, 0, settle_delay); }, &midiSender, 50, 275, 475 , hammer_travel, minPressUS},
-  { []() -> int { return readAdc(signalPins[0], 0, 0, 1, settle_delay); }, &midiSender, 51, 410, 515 , hammer_travel, minPressUS},
-  { []() -> int { return readAdc(signalPins[0], 0, 0, 0, settle_delay); }, &midiSender, 52, 620, 550 , hammer_travel, minPressUS},
-  { []() -> int { return readAdc(signalPins[1], 0, 1, 1, settle_delay); }, &midiSenderDummy, 61, 608, 545 , hammer_travel, minPressUS},
-  { []() -> int { return readAdc(signalPins[1], 0, 1, 0, settle_delay); }, &midiSenderDummy, 62, 608, 545 , hammer_travel, minPressUS},
-  { []() -> int { return readAdc(signalPins[1], 0, 0, 1, settle_delay); }, &midiSenderDummy, 63, 608, 545 , hammer_travel, minPressUS},
-  { []() -> int { return readAdc(signalPins[1], 0, 0, 0, settle_delay); }, &midiSenderDummy, 64, 608, 545 , hammer_travel, minPressUS}
+  { []() -> int { return readAdc(signalPins[0], 0, 1, 1, settle_delay); }, &midiSender, 49, adcValKeyDown, adcValKeyUp , hammer_travel, minPressUS},
+  { []() -> int { return readAdc(signalPins[0], 0, 1, 0, settle_delay); }, &midiSender, 50, adcValKeyDown, adcValKeyUp , hammer_travel, minPressUS},
+  { []() -> int { return readAdc(signalPins[0], 0, 0, 1, settle_delay); }, &midiSender, 51, adcValKeyDown, adcValKeyUp , hammer_travel, minPressUS},
+  { []() -> int { return readAdc(signalPins[0], 0, 0, 0, settle_delay); }, &midiSender, 52, adcValKeyDown, adcValKeyUp , hammer_travel, minPressUS},
+  { []() -> int { return readAdc(signalPins[1], 0, 1, 1, settle_delay); }, &midiSenderDummy, 61, adcValKeyDown, adcValKeyUp , hammer_travel, minPressUS},
+  { []() -> int { return readAdc(signalPins[1], 0, 1, 0, settle_delay); }, &midiSenderDummy, 62, adcValKeyDown, adcValKeyUp , hammer_travel, minPressUS},
+  { []() -> int { return readAdc(signalPins[1], 0, 0, 1, settle_delay); }, &midiSenderDummy, 63, adcValKeyDown, adcValKeyUp , hammer_travel, minPressUS},
+  { []() -> int { return readAdc(signalPins[1], 0, 0, 0, settle_delay); }, &midiSenderDummy, 64, adcValKeyDown, adcValKeyUp , hammer_travel, minPressUS}
 };
 
 int nPedals = 1;
@@ -138,7 +144,8 @@ SerialCommand sCmd;
 
 // help string, printed with "help" command
 const char* helpString = "Commands:\n"
-                          "c: toggle calibration\n"
+                          "tc: toggle calibration of thresholds\n"
+                          "ts: save updated thresholds to sd card\n"
                           "pp: print key parameters (including calibration results)\n"
                           "pm: change print mode (stream, buffers, notes, none)\n"
                           "pk: set print key (0-(nKeys-1), +, -)\n"
@@ -163,7 +170,8 @@ void setup() {
 
   sCmd.addCommand("help", printHelp);
   sCmd.addCommand("h", printHelp);
-  sCmd.addCommand("c", toggleCalibration);
+  sCmd.addCommand("tc", toggleCalibration);
+  sCmd.addCommand("ts", saveKeyParams);
   sCmd.addCommand("pp", printKeyParams);
   sCmd.addCommand("pm", changePrintMode);
   sCmd.addCommand("pk", setPrintKey);
@@ -172,6 +180,21 @@ void setup() {
   sCmd.setDefaultHandler(unrecognizedCmd);
 
   midiSender.initialize();
+  ph.initialize(n_keys);
+
+  // load key parameters from SD card
+  for (int i = 0; i < n_keys; i++) {
+    if (ph.existsAdcValKeyDown(i)) {
+      // read the value from the SD card
+      keys[i].setAdcValKeyDown(ph.getAdcValKeyDown(i));
+      Serial.printf("Key %d: adcValKeyDown: %d\n", i, keys[i].getAdcValKeyDown());
+    }
+    if (ph.existsAdcValKeyUp(i)) {
+      // read the value from the SD card
+      keys[i].setAdcValKeyUp(ph.getAdcValKeyUp(i));
+      Serial.printf("Key %d: adcValKeyUp: %d\n", i, keys[i].getAdcValKeyUp());
+    }
+  }
 
   for (int i = 0; i < nEnable; i++) {
     digitalWrite(enablePins[i], LOW);
@@ -212,6 +235,26 @@ void setup() {
 void toggleCalibration () {
   for (int i = 0; i < n_keys; i++) {
     keys[i].toggleCalibration();
+  }
+}
+
+// function for saving key parameters to SD card
+void saveKeyParams () {
+  // first, update the key parameters in the ParamHandler object
+  for (int i = 0; i < n_keys; i++) {
+    // read the value from the SD card
+    ph.setAdcValKeyDown(i, keys[i].getAdcValKeyDown());
+    ph.setAdcValKeyUp(i, keys[i].getAdcValKeyUp());
+  }
+  // write key parameters to SD card
+  if (ph.writeParams()) {
+    Serial.print("\n");
+    Serial.println("Key parameters saved to SD card");
+    pausePrintStream();
+  } else {
+    Serial.print("\n");
+    Serial.println("Failed to save key parameters to SD card");
+    pausePrintStream();
   }
 }
 

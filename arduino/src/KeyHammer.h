@@ -153,6 +153,10 @@ class KeyHammer
     elapsedMicros elapsedUS;
     // for keeping track of time since last note on
     elapsedMicros noteOnElapsedUS;
+    // for keeping track of time since noteOnThreshold passed by hammer
+    elapsedMicros noteOnThresholdElapsedUS;
+    // to check if we have generated a note on since the last time the hammer passed the noteOnThreshold
+    bool noteOnThresholdPassed = false;
 
     float getKeyPosition() const { return keyPosition; }
     float getKeySpeed() const { return keySpeed; }

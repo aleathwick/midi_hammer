@@ -172,31 +172,44 @@ void KeyHammer::updateHammer () {
 
 void KeyHammer::checkNoteOn () {
   // check for note ons
-  if (keyArmed && (hammerPosition > noteOnThreshold) && (keySpeed > 0)) {
-    // do something with hammer speed to get velocity
-    velocity = hammerSpeed;
-    velocityIndex = round(hammerSpeed * hammerSpeedScaler);
-    velocityIndex = min(velocityIndex, velocityMapLength-1);
-    // sometimes negative values for velocityIndex occur, probably due to a mismatch between thresholds and actual ADC range
-    velocityIndex = max(velocityIndex, 0);
-    midiSender->sendNoteOn(pitch, velocityMap[velocityIndex], 2);
-    // useful when testing
-    // midiSender->sendNoteOn(50 + noteCount % 12, 64, 2);
-    noteOn = true;
-    keyArmed = false;
-    if (printMode == PRINT_NOTES){
-      Serial.printf("\n note on: hammerSpeed %f, velocityIndex %d, velocity %d pitch %d \n", velocity, velocityIndex, velocityMap[velocityIndex], pitch);
+  // do something with noteOnThresholdElapsedUS... set to 0 when hammer passes threshold for the first time noteOnThresholdPassed
+
+  if (keyArmed && (hammerPosition > noteOnThreshold)) {
+    // if this is the first time the hammer has passed the noteOnThreshold, start the clock
+    if (! noteOnThresholdPassed) {
+      noteOnThresholdElapsedUS = 0;
+      noteOnThresholdPassed = true;
     }
-    // maybe print the buffer on note on?
-    // could be useful for understanding adc/key/hammer behaviour
-    bufferPrinted = false;
-    noteOnElapsedUS = 0;
-    lastNoteOnHammerSpeed = hammerSpeed;
-    lastNoteOnVelocity = velocityMap[velocityIndex];
-    noteCount++;
-    hammerPosition = noteOnThreshold;
-    hammerSpeed = -hammerSpeed;
+    // we generate a note on after the hammer has passed the noteOnThreshold if
+    // - more than 10ms have elapsed, or
+    // - the key is no longer moving down
+    if ((noteOnThresholdElapsedUS > 10000) || (keySpeed <= 0)) {
+      // do something with hammer speed to get velocity
+      velocity = hammerSpeed;
+      velocityIndex = round(hammerSpeed * hammerSpeedScaler);
+      velocityIndex = min(velocityIndex, velocityMapLength-1);
+      // sometimes negative values for velocityIndex occur, probably due to a mismatch between thresholds and actual ADC range
+      velocityIndex = max(velocityIndex, 0);
+      midiSender->sendNoteOn(pitch, velocityMap[velocityIndex], 2);
+      // useful when testing
+      // midiSender->sendNoteOn(50 + noteCount % 12, 64, 2);
+      noteOn = true;
+      noteOnThresholdPassed = false;
+      keyArmed = false;
+      if (printMode == PRINT_NOTES){
+        Serial.printf("\n note on: hammerSpeed %f, velocityIndex %d, velocity %d pitch %d \n", velocity, velocityIndex, velocityMap[velocityIndex], pitch);
+      }
+      // maybe print the buffer on note on?
+      // could be useful for understanding adc/key/hammer behaviour
+      bufferPrinted = false;
+      noteOnElapsedUS = 0;
+      lastNoteOnHammerSpeed = hammerSpeed;
+      lastNoteOnVelocity = velocityMap[velocityIndex];
+      noteCount++;
+      hammerPosition = noteOnThreshold;
+      hammerSpeed = -hammerSpeed;
     }
+  }
 }
 
 void KeyHammer::checkNoteOff () {

@@ -57,7 +57,7 @@ void KeyHammer::updateADCParams () {
 
   // gravity calculation
   // gravity in metres per microsecond^2
-  float gravity_m = 9.81e-12;
+  float gravity_m = 9.81e-12 * gravityScaler;
   // gravity in mm per microsecond^2
   float gravity_mm = gravity_m * 1000;
   // gravity in adc bits per microsecond^2

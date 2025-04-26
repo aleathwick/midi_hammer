@@ -72,6 +72,8 @@ class KeyHammer
     float hammerSpeed;
     float hammer_travel;
     float gravity;
+    // scale gravity applied to hammer, e.g. 0.1 will be 10% of 'normal' gravity
+    float gravityScaler = 0.1;
 
     bool noteOn;
     bool keyArmed;

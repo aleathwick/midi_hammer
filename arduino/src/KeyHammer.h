@@ -172,4 +172,10 @@ class KeyHammer
     void disable() { enabled = false; }
     bool isEnabled() const { return enabled; }
 
+    // setters/getters for adcValKeyUp and adcValKeyDown
+    void setAdcValKeyUp(int value) { adcValKeyUp = value; }
+    void setAdcValKeyDown(int value) { adcValKeyDown = value; }
+    int getAdcValKeyUp() const { return adcValKeyUp; }
+    int getAdcValKeyDown() const { return adcValKeyDown; }
+
 };

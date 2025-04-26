@@ -71,6 +71,7 @@ class KeyHammer
     float hammerPosition;
     float hammerSpeed;
     float hammer_travel;
+    float maxHammerSpeed_m_s;
     float gravity;
     // scale gravity applied to hammer, e.g. 0.1 will be 10% of 'normal' gravity
     float gravityScaler = 0.1;
@@ -129,6 +130,8 @@ class KeyHammer
     void checkNoteOff();
     void stepKey();
     void printBuffers();
+    float convert_m_s2bits_us(float m_s);
+    float convert_bits_us2m_s(float bits_us);
     
   protected:
     void updateElapsed();
@@ -137,7 +140,7 @@ class KeyHammer
   
 
   public:
-    KeyHammer(int(*adcFnPtr)(void), MidiSender* midiSender,int pitch, int adcValKeyDown, int adcValKeyUp, float hammer_travel, int minPressUS);
+    KeyHammer(int(*adcFnPtr)(void), MidiSender* midiSender,int pitch, int adcValKeyDown, int adcValKeyUp, float hammer_travel, float maxHammerSpeed_m_s);
     void step();
     // operation mode switches between operation as a hammer simulation key, a key, or a pedal
     int getAdcValue(void);

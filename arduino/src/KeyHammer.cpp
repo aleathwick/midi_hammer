@@ -15,8 +15,8 @@ int velocityMap[velocityMapLength];
 
 
 // use a constructor initializer list for adc, otherwise the reference won't work
-KeyHammer::KeyHammer (int(*adcFnPtr)(void), MidiSender* midiSender, int pitch, int adcValKeyDown=430, int adcValKeyUp=50, float hammer_travel=4.5, int minPressUS=8500)
-  : adcFnPtr(adcFnPtr), midiSender(midiSender), pitch(pitch), adcValKeyDown(adcValKeyDown), adcValKeyUp(adcValKeyUp), hammer_travel(hammer_travel), minPressUS(minPressUS) {
+KeyHammer::KeyHammer (int(*adcFnPtr)(void), MidiSender* midiSender, int pitch, int adcValKeyDown=430, int adcValKeyUp=50, float hammer_travel=4.5, float maxHammerSpeed_m_s=2.5)
+  : adcFnPtr(adcFnPtr), midiSender(midiSender), pitch(pitch), adcValKeyDown(adcValKeyDown), adcValKeyUp(adcValKeyUp), hammer_travel(hammer_travel), maxHammerSpeed_m_s(maxHammerSpeed_m_s) {
   
   updateADCParams();
   
@@ -64,9 +64,9 @@ void KeyHammer::updateADCParams () {
   // hammer travel is in mm
   gravity = gravity_mm  / hammer_travel * (adcValKeyDown - adcValKeyUp);
 
-  // max hammer speed measured in adc bits per microseconds
-  float maxHammerSpeed = (adcValKeyDown - adcValKeyUp) / (float)minPressUS;
-  hammerSpeedScaler = velocityMapLength / maxHammerSpeed;
+  float maxHammerSpeed_bits_us = convert_m_s2bits_us(maxHammerSpeed_m_s);
+
+  hammerSpeedScaler = velocityMapLength / maxHammerSpeed_bits_us;
 }
 
 
@@ -197,7 +197,7 @@ void KeyHammer::checkNoteOn () {
       noteOnThresholdPassed = false;
       keyArmed = false;
       if (printMode == PRINT_NOTES){
-        Serial.printf("\n note on: hammerSpeed %f, velocityIndex %d, velocity %d pitch %d \n", velocity, velocityIndex, velocityMap[velocityIndex], pitch);
+        Serial.printf("\n ON-%d: hammerSpeed_bits_us %f, hammerSpeed_m_s %f, velocity %d \n", pitch, velocity, convert_bits_us2m_s(velocity), velocityMap[velocityIndex]);
       }
       // maybe print the buffer on note on?
       // could be useful for understanding adc/key/hammer behaviour
@@ -362,4 +362,15 @@ void KeyHammer::printKeyParams() {
   //updatedKeyDownThreshold
   Serial.printf("updatedKeyDownThreshold: %d \n", updatedKeyDownThreshold);
   Serial.flush();
+}
+
+float KeyHammer::convert_m_s2bits_us(float m_s) {
+  // convert from m/s to bits/us
+  float mm_s = m_s * 1000;
+  return m_s * (adcValKeyDown - adcValKeyUp) * 1000 / 1e6  / hammer_travel;
+}
+//maxHammerSpeed_m_s / 1000 / 1e6;
+float KeyHammer::convert_bits_us2m_s(float bits_us) {
+  // convert from bits/us to m/s
+  return bits_us * hammer_travel / (adcValKeyDown - adcValKeyUp) / 1000 * 1e6;
 }

@@ -45,9 +45,9 @@ void KeyHammer::updateADCParams () {
   // assume ADC values increase as the key is pressed
   // i.e. adcValKeyDown > adcValKeyUp
   // if this is not the case, flip the values
-  if (adcValKeyDown < adcValKeyUp) {
-    adcValKeyDown = -adcValKeyDown;
-    adcValKeyUp = -adcValKeyUp;
+  if (abs(adcValKeyDown) < abs(adcValKeyUp)) {
+    adcValKeyDown = -abs(adcValKeyDown);
+    adcValKeyUp = -abs(adcValKeyUp);
   }
   
   // update thresholds

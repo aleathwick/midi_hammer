@@ -264,10 +264,6 @@ void KeyHammer::step () {
   }
 }
 
-void KeyHammer::test () {
-  Serial.printf("value:%d\n", getAdcValue());
-}
-
 int KeyHammer::getAdcValue () {
   if (adcValKeyUp < 0) {
     return -adcFnPtr();

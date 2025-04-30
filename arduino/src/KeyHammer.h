@@ -127,7 +127,6 @@ class KeyHammer
     void updateHammer();
     void checkNoteOn();
     void checkNoteOff();
-    void test();
     void stepKey();
     void printBuffers();
     

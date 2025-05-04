@@ -72,8 +72,8 @@ int testFunction() {
 const int n_keys = 8;
 
 // specify constant int value for min_key_press shared across all keys
-const int minPressUS = 4000;
-const float hammer_travel = 20;
+const float maxHammerSpeed_m_s = 2.5;
+const float hammer_travel = 7;
 // default vals, but will set these during calibration / read in saved calibrated values from SD card
 int adcValKeyDown = 560;
 int adcValKeyUp = 450;
@@ -82,7 +82,7 @@ ParamHandler ph;
 
 #include "MidiSenderDummy.h"
 MidiSenderDummy midiSenderDummy;
-int settle_delay = 4;
+int settle_delay = 6;
 // calling readDualGetAdcValue0(0, 1, 3, 3, settle_delay) will read adc values from pins
 // 0 and 1, using adc0 and adc1, with multiplexers both sent to input 3, and will return
 // the value from adc0 (reading occurs simultaneously)
@@ -90,14 +90,14 @@ int settle_delay = 4;
 // value from adc1, from the previous read without needing to set the muxes again
 // the cached value is used since the configuration is the same
 KeyHammer keys[] = {
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(0, 1, 3, 3, settle_delay); }, &midiSender, 49, adcValKeyDown, adcValKeyUp , hammer_travel, minPressUS},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue1(0, 1, 3, 3, settle_delay); }, &midiSenderDummy, 61, adcValKeyDown, adcValKeyUp , hammer_travel, minPressUS},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(0, 1, 2, 2, settle_delay); }, &midiSender, 50, adcValKeyDown, adcValKeyUp , hammer_travel, minPressUS},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue1(0, 1, 2, 2, settle_delay); }, &midiSenderDummy, 62, adcValKeyDown, adcValKeyUp , hammer_travel, minPressUS},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(0, 1, 1, 1, settle_delay); }, &midiSender, 51, adcValKeyDown, adcValKeyUp , hammer_travel, minPressUS},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue1(0, 1, 1, 1, settle_delay); }, &midiSenderDummy, 63, adcValKeyDown, adcValKeyUp , hammer_travel, minPressUS},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(0, 1, 0, 0, settle_delay); }, &midiSender, 52, adcValKeyDown, adcValKeyUp , hammer_travel, minPressUS},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue1(0, 1, 0, 0, settle_delay); }, &midiSenderDummy, 64, adcValKeyDown, adcValKeyUp , hammer_travel, minPressUS}
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(0, 1, 3, 3, settle_delay); }, &midiSender, 49, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(0, 1, 3, 3, settle_delay); }, &midiSenderDummy, 61, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(0, 1, 2, 2, settle_delay); }, &midiSender, 50, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(0, 1, 2, 2, settle_delay); }, &midiSenderDummy, 62, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(0, 1, 1, 1, settle_delay); }, &midiSender, 51, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(0, 1, 1, 1, settle_delay); }, &midiSenderDummy, 63, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(0, 1, 0, 0, settle_delay); }, &midiSender, 52, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(0, 1, 0, 0, settle_delay); }, &midiSenderDummy, 64, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s}
 };
 
 int nPedals = 0;
@@ -492,7 +492,7 @@ void loop() {
     printInfoTriggered = true;
   }
 
-  if (keys[0].elapsedUS >= 1250) {
+  if (keys[0].elapsedUS >= 250) {
     for (int i = 0; i < n_keys; i++) {
       if (printInfoTriggered & ((i == printkey) || printAllKeys )) {
         printKeyState(i);

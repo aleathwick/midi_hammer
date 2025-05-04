@@ -15,8 +15,8 @@ int velocityMap[velocityMapLength];
 
 
 // use a constructor initializer list for adc, otherwise the reference won't work
-KeyHammer::KeyHammer (int(*adcFnPtr)(void), MidiSender* midiSender, int pitch, int adcValKeyDown=430, int adcValKeyUp=50, float hammer_travel=4.5, int minPressUS=8500)
-  : adcFnPtr(adcFnPtr), midiSender(midiSender), pitch(pitch), adcValKeyDown(adcValKeyDown), adcValKeyUp(adcValKeyUp), hammer_travel(hammer_travel), minPressUS(minPressUS) {
+KeyHammer::KeyHammer (int(*adcFnPtr)(void), MidiSender* midiSender, int pitch, int adcValKeyDown=430, int adcValKeyUp=50, float hammer_travel=4.5, float maxHammerSpeed_m_s=2.5)
+  : adcFnPtr(adcFnPtr), midiSender(midiSender), pitch(pitch), adcValKeyDown(adcValKeyDown), adcValKeyUp(adcValKeyUp), hammer_travel(hammer_travel), maxHammerSpeed_m_s(maxHammerSpeed_m_s) {
   
   updateADCParams();
   
@@ -30,7 +30,7 @@ KeyHammer::KeyHammer (int(*adcFnPtr)(void), MidiSender* midiSender, int pitch, i
   noteOn = false;
   keyArmed = true;
 
-  scaleFilterWeights(keyPosFilter);
+  scaleFilterWeights(SavGolayFilters::posFilter, SavGolayFilters::posFilterLength);
 
   elapsedUS = 0;
 
@@ -45,9 +45,9 @@ void KeyHammer::updateADCParams () {
   // assume ADC values increase as the key is pressed
   // i.e. adcValKeyDown > adcValKeyUp
   // if this is not the case, flip the values
-  if (adcValKeyDown < adcValKeyUp) {
-    adcValKeyDown = -adcValKeyDown;
-    adcValKeyUp = -adcValKeyUp;
+  if (abs(adcValKeyDown) < abs(adcValKeyUp)) {
+    adcValKeyDown = -abs(adcValKeyDown);
+    adcValKeyUp = -abs(adcValKeyUp);
   }
   
   // update thresholds
@@ -57,16 +57,16 @@ void KeyHammer::updateADCParams () {
 
   // gravity calculation
   // gravity in metres per microsecond^2
-  float gravity_m = 9.81e-12;
+  float gravity_m = 9.81e-12 * gravityScaler;
   // gravity in mm per microsecond^2
   float gravity_mm = gravity_m * 1000;
   // gravity in adc bits per microsecond^2
   // hammer travel is in mm
   gravity = gravity_mm  / hammer_travel * (adcValKeyDown - adcValKeyUp);
 
-  // max hammer speed measured in adc bits per microseconds
-  float maxHammerSpeed = (adcValKeyDown - adcValKeyUp) / (float)minPressUS;
-  hammerSpeedScaler = velocityMapLength / maxHammerSpeed;
+  float maxHammerSpeed_bits_us = convert_m_s2bits_us(maxHammerSpeed_m_s);
+
+  hammerSpeedScaler = velocityMapLength / maxHammerSpeed_bits_us;
 }
 
 
@@ -142,12 +142,27 @@ void KeyHammer::updateKey () {
   lastKeyPosition = keyPosition;
   rawADC = getAdcValue();
   adcBuffer.push(rawADC);
-  keyPosition = applyFilter(adcBuffer, keyPosFilter);
+  keyPosition = applyFilter(adcBuffer, SavGolayFilters::posFilter, SavGolayFilters::posFilterLength);
 
 }
 
 void KeyHammer::updateKeySpeed () {
-  keySpeed = applyFilter(adcBuffer, keySpeedFilter) / (float)elapsedUSBuffer.last();
+  keySpeed = applyFilter(adcBuffer, SavGolayFilters::speedFilter, SavGolayFilters::speedFilterLength) / (float)elapsedUSBuffer.last();
+  // track the mean key speed since last indication of the start of a key press or 'strike'
+  // that indication could be keySpeed > 0, along with one of...
+  // - hammer key interaction
+  // - hammer being less than the note on threshold
+  // at this point, hammerKeyInteraction won't have been updated since the last iteration
+  // if ((keySpeed < 0) && (hammerKeyInteraction)) {
+  if ((keySpeed <= 0) && (!noteOnThresholdPassed)) {
+    // reset meanStrikeKeySpeed
+    meanStrikeKeySpeed = 0;
+    meanStrikeKeySpeedSamples = 0;
+  } else {
+    // update meanStrikeKeySpeed
+    meanStrikeKeySpeedSamples += 1;
+    meanStrikeKeySpeed = keySpeed / meanStrikeKeySpeedSamples + meanStrikeKeySpeed * (meanStrikeKeySpeedSamples - 1) / meanStrikeKeySpeedSamples;
+  }
 
 }
 
@@ -164,39 +179,56 @@ void KeyHammer::updateHammer () {
           // if ((hammerSpeed > keySpeed) == (adcValKeyUp > adcValKeyDown)) {
             // if (abs(hammerSpeed) < abs(keySpeed)) {
           hammerSpeed = keySpeed;
+          hammerKeyInteraction = true;
           // }
         // }
+  } else {
+    hammerKeyInteraction = false;
   }
   hammerPositionBuffer.push(hammerPosition);
 }
 
 void KeyHammer::checkNoteOn () {
   // check for note ons
-  if (keyArmed && (hammerPosition > noteOnThreshold) && (keySpeed > 0)) {
-    // do something with hammer speed to get velocity
-    velocity = hammerSpeed;
-    velocityIndex = round(hammerSpeed * hammerSpeedScaler);
-    velocityIndex = min(velocityIndex, velocityMapLength-1);
-    // sometimes negative values for velocityIndex occur, probably due to a mismatch between thresholds and actual ADC range
-    velocityIndex = max(velocityIndex, 0);
-    midiSender->sendNoteOn(pitch, velocityMap[velocityIndex], 2);
-    // useful when testing
-    // midiSender->sendNoteOn(50 + noteCount % 12, 64, 2);
-    noteOn = true;
-    keyArmed = false;
-    if (printMode == PRINT_NOTES){
-      Serial.printf("\n note on: hammerSpeed %f, velocityIndex %d, velocity %d pitch %d \n", velocity, velocityIndex, velocityMap[velocityIndex], pitch);
+  // do something with noteOnThresholdElapsedUS... set to 0 when hammer passes threshold for the first time noteOnThresholdPassed
+
+  if (keyArmed && (hammerPosition > noteOnThreshold)) {
+    // if this is the first time the hammer has passed the noteOnThreshold, start the clock
+    if (! noteOnThresholdPassed) {
+      noteOnThresholdElapsedUS = 0;
+      noteOnThresholdPassed = true;
     }
-    // maybe print the buffer on note on?
-    // could be useful for understanding adc/key/hammer behaviour
-    bufferPrinted = false;
-    noteOnElapsedUS = 0;
-    lastNoteOnHammerSpeed = hammerSpeed;
-    lastNoteOnVelocity = velocityMap[velocityIndex];
-    noteCount++;
-    hammerPosition = noteOnThreshold;
-    hammerSpeed = -hammerSpeed;
+    // we generate a note on after the hammer has passed the noteOnThreshold if
+    // - more than 10ms have elapsed, or
+    // - the key is no longer moving down
+    if ((noteOnThresholdElapsedUS > 10000) || (keySpeed <= 0)) {
+      // do something with hammer speed to get velocity
+      velocity = hammerSpeed;
+      // velocity = meanStrikeKeySpeed;
+      velocityIndex = round(velocity * hammerSpeedScaler);
+      velocityIndex = min(velocityIndex, velocityMapLength-1);
+      // sometimes negative values for velocityIndex occur, probably due to a mismatch between thresholds and actual ADC range
+      velocityIndex = max(velocityIndex, 0);
+      midiSender->sendNoteOn(pitch, velocityMap[velocityIndex], 2);
+      // useful when testing
+      // midiSender->sendNoteOn(50 + noteCount % 12, 64, 2);
+      noteOn = true;
+      noteOnThresholdPassed = false;
+      keyArmed = false;
+      if (printMode == PRINT_NOTES){
+        Serial.printf("\n ON-%d: hammerSpeed_bits_us %f, hammerSpeed_m_s %f, meanStrikeKeySpeed_m_s %f, meanKeySamples %d, velocity %d \n", pitch, velocity, convert_bits_us2m_s(velocity), convert_bits_us2m_s(meanStrikeKeySpeed), meanStrikeKeySpeedSamples, velocityMap[velocityIndex]);
+      }
+      // maybe print the buffer on note on?
+      // could be useful for understanding adc/key/hammer behaviour
+      bufferPrinted = false;
+      noteOnElapsedUS = 0;
+      lastNoteOnHammerSpeed = hammerSpeed;
+      lastNoteOnVelocity = velocityMap[velocityIndex];
+      noteCount++;
+      hammerPosition = noteOnThreshold;
+      hammerSpeed = -hammerSpeed;
     }
+  }
 }
 
 void KeyHammer::checkNoteOff () {
@@ -211,7 +243,7 @@ void KeyHammer::checkNoteOff () {
     if (keyPosition < noteOffThreshold) {
       midiSender->sendNoteOff(pitch, 64, 2);
       if (printMode == PRINT_NOTES){
-        Serial.printf("note off: noteOffThreshold %d, adcValue %d, velocity %d  pitch %d \n", noteOffThreshold, keyPosition, 64, pitch);
+        Serial.printf("OFF-%d: adcValue %d, keySpeed_bits_us %f, keySpeed_m_s \n", pitch, keySpeed, convert_bits_us2m_s(keySpeed));
       }
       noteOn = false;
     }
@@ -251,10 +283,6 @@ void KeyHammer::step () {
   }
 }
 
-void KeyHammer::test () {
-  Serial.printf("value:%d\n", getAdcValue());
-}
-
 int KeyHammer::getAdcValue () {
   if (adcValKeyUp < 0) {
     return -adcFnPtr();
@@ -272,8 +300,7 @@ void KeyHammer::generateVelocityMap () {
   }
 }
 
-template <size_t N>
-void KeyHammer::scaleFilterWeights(float (&filter)[N]) {
+void KeyHammer::scaleFilterWeights(float* filter, size_t N) {
     float sum = 0;
     // size_t is an unsigned integer type, so use it for i also
     // (but if i never negative, it would be fine anyway)
@@ -286,8 +313,8 @@ void KeyHammer::scaleFilterWeights(float (&filter)[N]) {
 }
 
 
-template <typename T, size_t bufferLength, size_t filterLength>
-float KeyHammer::applyFilter(CircularBuffer<T, bufferLength>& buffer, float (&filter)[filterLength]) {
+template <typename T, size_t bufferLength>
+float KeyHammer::applyFilter(CircularBuffer<T, bufferLength>& buffer, const float* filter, size_t filterLength) {
   float filteredValue = 0;
   int bufferSize = buffer.size();
   int startIndex = max(0, bufferSize - filterLength);
@@ -353,4 +380,15 @@ void KeyHammer::printKeyParams() {
   //updatedKeyDownThreshold
   Serial.printf("updatedKeyDownThreshold: %d \n", updatedKeyDownThreshold);
   Serial.flush();
+}
+
+float KeyHammer::convert_m_s2bits_us(float m_s) {
+  // convert from m/s to bits/us
+  float mm_s = m_s * 1000;
+  return m_s * (adcValKeyDown - adcValKeyUp) * 1000 / 1e6  / hammer_travel;
+}
+//maxHammerSpeed_m_s / 1000 / 1e6;
+float KeyHammer::convert_bits_us2m_s(float bits_us) {
+  // convert from bits/us to m/s
+  return bits_us * hammer_travel / (adcValKeyDown - adcValKeyUp) / 1000 * 1e6;
 }

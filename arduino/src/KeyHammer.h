@@ -8,6 +8,7 @@
 #include <elapsedMillis.h>
 #include "MidiSender.h"
 #include "Statistical.h"
+#include "SavGolayFilters.h"
 
 enum PrintMode {
   PRINT_NONE,
@@ -31,19 +32,6 @@ class KeyHammer
     CircularBuffer<int, BUFFER_SIZE> elapsedUSBuffer;
     CircularBuffer<int, BUFFER_SIZE> iterationBuffer;
 
-    // filters should be in dot product order, i.e. ordered like buffers, which is oldest to newest
-    static const int posFilterLength = 18;
-    float keyPosFilter[posFilterLength] = {
-      -0.09356725, -0.07602339, -0.05847953, -0.04093567, -0.02339181,
-      -0.00584795,  0.01169591,  0.02923977,  0.04678363,  0.06432749,
-       0.08187135,  0.0994152 ,  0.11695906,  0.13450292,  0.15204678,
-       0.16959064,  0.1871345 ,  0.20467836};
-    static const int speedFilterLength = 18;
-    float keySpeedFilter[speedFilterLength] = {
-      -0.01754386, -0.01547988, -0.01341589, -0.01135191, -0.00928793,
-      -0.00722394, -0.00515996, -0.00309598, -0.00103199,  0.00103199,
-       0.00309598,  0.00515996,  0.00722394,  0.00928793,  0.01135191,
-       0.01341589,  0.01547988,  0.01754386};
 
     bool enabled = true;
 
@@ -71,17 +59,16 @@ class KeyHammer
     float hammerPosition;
     float hammerSpeed;
     float hammer_travel;
+    float maxHammerSpeed_m_s;
     float gravity;
+    // scale gravity applied to hammer, e.g. 0.1 will be 10% of 'normal' gravity
+    float gravityScaler = 0.5;
 
     bool noteOn;
     bool keyArmed;
     float velocity;
     int velocityIndex;
 
-    // this and over will result in velocity of 127
-    // 0.06 about right for piano, foot drum is more like 0.04
-    // measured in adc bits per microsecond
-    int minPressUS;
     // used to put hammer speed on an appropriate scale for indexing into velocityMap
     float hammerSpeedScaler;
 
@@ -97,11 +84,10 @@ class KeyHammer
     PrintMode printMode;
     
     // fn to scale the weights of a filter so they sum to 1
-    template <size_t N>
-    void scaleFilterWeights(float (&filter)[N]);
+    void scaleFilterWeights(float* filter, size_t N);
     // fn to apply a filter to the most recent samples in a circular buffer
-    template <typename T, size_t bufferLength, size_t filterLength>
-    float KeyHammer::applyFilter(CircularBuffer<T, bufferLength>& buffer, float (&filter)[filterLength]);
+    template <typename T, size_t bufferLength>
+    float KeyHammer::applyFilter(CircularBuffer<T, bufferLength>& buffer, const float* filter, size_t filterLength);
 
     // calibration related
     int c_sample_n = 100;
@@ -125,9 +111,10 @@ class KeyHammer
     void updateHammer();
     void checkNoteOn();
     void checkNoteOff();
-    void test();
     void stepKey();
     void printBuffers();
+    float convert_m_s2bits_us(float m_s);
+    float convert_bits_us2m_s(float bits_us);
     
   protected:
     void updateElapsed();
@@ -136,7 +123,7 @@ class KeyHammer
   
 
   public:
-    KeyHammer(int(*adcFnPtr)(void), MidiSender* midiSender,int pitch, int adcValKeyDown, int adcValKeyUp, float hammer_travel, int minPressUS);
+    KeyHammer(int(*adcFnPtr)(void), MidiSender* midiSender,int pitch, int adcValKeyDown, int adcValKeyUp, float hammer_travel, float maxHammerSpeed_m_s);
     void step();
     // operation mode switches between operation as a hammer simulation key, a key, or a pedal
     int getAdcValue(void);
@@ -153,6 +140,19 @@ class KeyHammer
     elapsedMicros elapsedUS;
     // for keeping track of time since last note on
     elapsedMicros noteOnElapsedUS;
+    // for keeping track of time since noteOnThreshold passed by hammer
+    elapsedMicros noteOnThresholdElapsedUS;
+    // to check if we have generated a note on since the last time the hammer passed the noteOnThreshold
+    bool noteOnThresholdPassed = false;
+
+    // indicates whether or not the hammer is in contact with the key
+    bool hammerKeyInteraction = false;
+    // keep the average key speed since the beginning of the press or 'strike', updated iteratively
+    // this is an alternative way of determining note on velocity that showed promise when analysing
+    // data form key presses, but currently is not used, since sav golay with hammer speed works quite well anyway
+    float meanStrikeKeySpeed = 0;
+    // keep track of n samples contributing to the mean key strike speed, enabling iterative update
+    int meanStrikeKeySpeedSamples = 0;
 
     float getKeyPosition() const { return keyPosition; }
     float getKeySpeed() const { return keySpeed; }
@@ -173,8 +173,8 @@ class KeyHammer
     bool isEnabled() const { return enabled; }
 
     // setters/getters for adcValKeyUp and adcValKeyDown
-    void setAdcValKeyUp(int value) { adcValKeyUp = value; }
-    void setAdcValKeyDown(int value) { adcValKeyDown = value; }
+    void setAdcValKeyUp(int value) { adcValKeyUp = value; updateADCParams(); }
+    void setAdcValKeyDown(int value) { adcValKeyDown = value; updateADCParams(); }
     int getAdcValKeyUp() const { return adcValKeyUp; }
     int getAdcValKeyDown() const { return adcValKeyDown; }
 

@@ -5,8 +5,8 @@
 #pragma once
 
 // First define the lengths as preprocessor constants
-#define POS_FILTER_LENGTH 5
-#define SPEED_FILTER_LENGTH 5
+#define POS_FILTER_LENGTH 21
+#define SPEED_FILTER_LENGTH 21
 
 // filters should be in dot product order, i.e. ordered like buffers, which is oldest to newest
 namespace SavGolayFilters {

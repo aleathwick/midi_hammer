@@ -127,12 +127,9 @@ arduino-cli core upgrade
 ### to do
 - Arduino code:
   - simulation:
-    - specify min / max key speed in terms of mm/s key travel
-    - fix for behaviour of gravity (speed update should be based on mean of last and current speeds)
-    - perhaps switch to key speed method for velocity generation (mean key speed since key was moving above a minimum speed)
-  - filtering
-    - share filter values between keys
-    - choose filter based on total elapsed time target? E.g. 3000us.
+    - specify min key/hammer speed for midi velocity of 0 (currently only max speed for midi velocity of 127 is specified)
+    - perhaps experiment with key speed method for velocity generation? Implemented but not used
+  - add calibration of max key/hammer speed for midi velocity of 127 (might not per-key calibration when using PCBs)
   - interactive serial control
     - enable/disable keys
     - change simulation params for specific keys / all keys? 

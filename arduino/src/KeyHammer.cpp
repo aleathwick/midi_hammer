@@ -30,7 +30,7 @@ KeyHammer::KeyHammer (int(*adcFnPtr)(void), MidiSender* midiSender, int pitch, i
   noteOn = false;
   keyArmed = true;
 
-  scaleFilterWeights(keyPosFilter);
+  scaleFilterWeights(SavGolayFilters::posFilter, SavGolayFilters::posFilterLength);
 
   elapsedUS = 0;
 
@@ -142,12 +142,12 @@ void KeyHammer::updateKey () {
   lastKeyPosition = keyPosition;
   rawADC = getAdcValue();
   adcBuffer.push(rawADC);
-  keyPosition = applyFilter(adcBuffer, keyPosFilter);
+  keyPosition = applyFilter(adcBuffer, SavGolayFilters::posFilter, SavGolayFilters::posFilterLength);
 
 }
 
 void KeyHammer::updateKeySpeed () {
-  keySpeed = applyFilter(adcBuffer, keySpeedFilter) / (float)elapsedUSBuffer.last();
+  keySpeed = applyFilter(adcBuffer, SavGolayFilters::speedFilter, SavGolayFilters::speedFilterLength) / (float)elapsedUSBuffer.last();
 
 }
 
@@ -281,8 +281,7 @@ void KeyHammer::generateVelocityMap () {
   }
 }
 
-template <size_t N>
-void KeyHammer::scaleFilterWeights(float (&filter)[N]) {
+void KeyHammer::scaleFilterWeights(float* filter, size_t N) {
     float sum = 0;
     // size_t is an unsigned integer type, so use it for i also
     // (but if i never negative, it would be fine anyway)
@@ -295,8 +294,8 @@ void KeyHammer::scaleFilterWeights(float (&filter)[N]) {
 }
 
 
-template <typename T, size_t bufferLength, size_t filterLength>
-float KeyHammer::applyFilter(CircularBuffer<T, bufferLength>& buffer, float (&filter)[filterLength]) {
+template <typename T, size_t bufferLength>
+float KeyHammer::applyFilter(CircularBuffer<T, bufferLength>& buffer, const float* filter, size_t filterLength) {
   float filteredValue = 0;
   int bufferSize = buffer.size();
   int startIndex = max(0, bufferSize - filterLength);

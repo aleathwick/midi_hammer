@@ -145,6 +145,15 @@ class KeyHammer
     // to check if we have generated a note on since the last time the hammer passed the noteOnThreshold
     bool noteOnThresholdPassed = false;
 
+    // indicates whether or not the hammer is in contact with the key
+    bool hammerKeyInteraction = false;
+    // keep the average key speed since the beginning of the press or 'strike', updated iteratively
+    // this is an alternative way of determining note on velocity that showed promise when analysing
+    // data form key presses, but currently is not used, since sav golay with hammer speed works quite well anyway
+    float meanStrikeKeySpeed = 0;
+    // keep track of n samples contributing to the mean key strike speed, enabling iterative update
+    int meanStrikeKeySpeedSamples = 0;
+
     float getKeyPosition() const { return keyPosition; }
     float getKeySpeed() const { return keySpeed; }
     float getHammerPosition() const { return hammerPosition; }

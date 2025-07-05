@@ -9,9 +9,11 @@
 
 // note that on teensy 4.1 some ADC pins are connected to both ADC0 and ADC1, some to only one
 // see here: https://forum.pjrc.com/index.php?threads/teensy-4-1-adc-channels.72373/post-322241
-// ADC0: 24, 25
-// ADC1: 26, 27, 38, 39
-// Both: 14-23, 40 & 41
+// ADC0: 24, 25 (A10, A11)
+// ADC1: 26, 27, 38, 39 (A12, A13, A14, A15)
+// Both: 14-23 (A0-9), 40 & 41 (A16 & A17)
+// The L/R ADCs for each sensor board should be split over the two ADCs
+// e.g. UP3_L and UP3_R should be on ADC0 and ADC1 respectively
 
 // Maximum number of signal pins supported
 #define MAX_SIGNAL_PINS 16
@@ -20,12 +22,12 @@
 #if N_ADDRESS_PINS == 3
 const int MUX_ADDRESSES[][N_ADDRESS_PINS] = {
     {0, 0, 0},
-    {0, 0, 1},
-    {0, 1, 0},
-    {0, 1, 1},
     {1, 0, 0},
-    {1, 0, 1},
+    {0, 1, 0},
     {1, 1, 0},
+    {0, 0, 1},
+    {1, 0, 1},
+    {0, 1, 1},
     {1, 1, 1}
 };
 #elif N_ADDRESS_PINS == 4

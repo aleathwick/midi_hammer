@@ -69,8 +69,6 @@ int testFunction() {
   return (int)(sin(testAdcTimerMS / (float)300) * 512) + 512;
 }
 
-const int n_keys = 8;
-
 // specify constant int value for min_key_press shared across all keys
 const float maxHammerSpeed_m_s = 2.5;
 const float hammer_travel = 7;
@@ -100,10 +98,12 @@ KeyHammer keys[] = {
   { []() -> int { return dualAdcManager.readDualGetAdcValue1(0, 1, 0, 0, settle_delay); }, &midiSenderDummy, 64, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s}
 };
 
-int nPedals = 0;
 Pedal pedals[] = {
   // { []() -> int { return dualAdcManager.readDualGetAdcValue0(0, 1, 4, 3, settle_delay); }, &midiSender, 64, 584, 534 },
 };
+
+const int n_keys = sizeof(keys) / sizeof(keys[0]);
+const int nPedals = sizeof(pedals) / sizeof(pedals[0]);
 
 int printkey = 0;
 bool printAllKeys = false;

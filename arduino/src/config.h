@@ -2,8 +2,8 @@
 
 // choose the board type
 // either PICO, TEENSY
-// #define TEENSY
-#define PICO
+#define TEENSY
+// #define PICO
 
 // number of values to store in buffers
 // e.g. for the ADC buffer

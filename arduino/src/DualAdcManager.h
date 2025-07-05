@@ -20,12 +20,12 @@
 #if N_ADDRESS_PINS == 3
 const int MUX_ADDRESSES[][N_ADDRESS_PINS] = {
     {0, 0, 0},
-    {0, 0, 1},
-    {0, 1, 0},
-    {0, 1, 1},
     {1, 0, 0},
-    {1, 0, 1},
+    {0, 1, 0},
     {1, 1, 0},
+    {0, 0, 1},
+    {1, 0, 1},
+    {0, 1, 1},
     {1, 1, 1}
 };
 #elif N_ADDRESS_PINS == 4

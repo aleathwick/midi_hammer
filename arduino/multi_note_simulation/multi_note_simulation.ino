@@ -54,8 +54,10 @@
   const int SP_RD1 = 11;
   const int SP_RD2 = 12;
   const int SP_RD3 = 13;
-  // calibration pin, used for calibration button
-  int calibrationPin = 14;
+  #ifdef USE_CALIBRATION_BUTTON
+    // calibration pin, used for calibration button
+    int calibrationPin = 14;
+  #endif
   DualAdcManager dualAdcManager;
   
   #endif
@@ -274,10 +276,12 @@ void printHelp() {
 void setup() {
   Serial.begin(57600);
   pinMode(LED_BUILTIN, OUTPUT);
-
-  b_toggle_calibration.attach( calibrationPin, INPUT_PULLUP );
-  b_toggle_calibration.interval(5);
-  b_toggle_calibration.setPressedState(LOW); 
+  
+  #ifdef USE_CALIBRATION_BUTTON
+    b_toggle_calibration.attach( calibrationPin, INPUT_PULLUP );
+    b_toggle_calibration.interval(5);
+    b_toggle_calibration.setPressedState(LOW); 
+  #endif
 
   sCmd.addCommand("help", printHelp);
   sCmd.addCommand("h", printHelp);
@@ -653,12 +657,13 @@ void loop() {
       printInfoTriggered = false;
       printTimerMS = 0;
     }
+    #ifdef USE_CALIBRATION_BUTTON
+      b_toggle_calibration.update();
 
-    b_toggle_calibration.update();
-
-  if ( b_toggle_calibration.pressed() ) {
-    toggleCalibration();
-  }
+      if ( b_toggle_calibration.pressed() ) {
+        toggleCalibration();
+      }
+    #endif
     
     loopTimerUS = 0;
     // do any loop end actions, such as reading any new MIDI messages

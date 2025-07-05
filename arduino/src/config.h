@@ -11,3 +11,6 @@
 // we need at least enough for the savitzy-golay filters - longest SG filter is 99
 // if dumping note-on adc data, then longer is better but need to baance number of keys with length of buffers
 #define BUFFER_SIZE 100
+
+// if defined then the calibration button will be enabled
+// #define USE_CALIBRATION_BUTTON

@@ -119,7 +119,9 @@ const int pC2muxAddr[] = {
 
 #include "MidiSenderDummy.h"
 MidiSenderDummy midiSenderDummy;
-int settle_delay = 6;
+// we don't need any signal delay, since we switch over the left muxes while reading the right, and vice versa
+// i.e. the left muxes settle while the right muxes are being read, and vice versa
+int settle_delay = 0;
 // calling readDualGetAdcValue0(0, 1, 3, 3, settle_delay) will read adc values from pins
 // 0 and 1, using adc0 and adc1, with multiplexers both sent to input 3, and will return
 // the value from adc0 (reading occurs simultaneously)

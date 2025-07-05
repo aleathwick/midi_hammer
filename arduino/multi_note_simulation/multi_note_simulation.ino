@@ -308,8 +308,11 @@ void setup() {
   for (int i = 0; i < nEnable; i++) {
     digitalWrite(enablePins[i], LOW);
   }
-  int nAddressPins = sizeof(addressPins0) / sizeof(addressPins0[0]);
-  dualAdcManager.begin(addressPins0, addressPins1, signalPins, nAddressPins);
+  // currently the number of address pins is controlled in DualADCManager.h
+  // but could make this more flexible
+  int nAddressPins = sizeof(addressPinsL) / sizeof(addressPinsL[0]);
+  int nSignalPins = sizeof(signalPins) / sizeof(signalPins[0]);
+  dualAdcManager.begin(addressPinsL, addressPinsR, signalPins, nSignalPins);
 }
 
 // can do setup on the other core too

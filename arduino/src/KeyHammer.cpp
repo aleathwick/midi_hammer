@@ -48,6 +48,9 @@ void KeyHammer::updateADCParams () {
   if (abs(adcValKeyDown) < abs(adcValKeyUp)) {
     adcValKeyDown = -abs(adcValKeyDown);
     adcValKeyUp = -abs(adcValKeyUp);
+  } else {
+    adcValKeyDown = abs(adcValKeyDown);
+    adcValKeyUp = abs(adcValKeyUp);
   }
   
   // update thresholds

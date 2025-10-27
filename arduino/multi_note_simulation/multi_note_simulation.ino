@@ -121,6 +121,17 @@ const int pC2muxAddr[] = {
 
 #include "MidiSenderDummy.h"
 MidiSenderDummy midiSenderDummy;
+// choose midisenders for each octave
+MidiSender* midiSenders[7] = {
+  &midiSenderDummy,
+  &midiSenderDummy,
+  &midiSenderDummy,
+  &midiSender,
+  &midiSender,
+  &midiSenderDummy,
+  &midiSenderDummy,
+};
+
 // we don't need any signal delay, since we switch over the left muxes while reading the right, and vice versa
 // i.e. the left muxes settle while the right muxes are being read, and vice versa
 int settle_delay = 0;
@@ -132,112 +143,106 @@ int settle_delay = 0;
 // the cached value is used since the configuration is the same
 KeyHammer keys[] = {
   // A / pc 0
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LD3, SP_LU2, pC2muxAddr[0], pC2muxAddr[6], settle_delay); }, &midiSenderDummy, MIDI_A, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_LD3, SP_LU2, pC2muxAddr[0], pC2muxAddr[6], settle_delay); }, &midiSenderDummy, MIDI_A+12, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LD1, SP_LM, pC2muxAddr[0], pC2muxAddr[6], settle_delay); }, &midiSenderDummy, MIDI_A+24, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_LD1, SP_LM, pC2muxAddr[0], pC2muxAddr[6], settle_delay); }, &midiSenderDummy, MIDI_A+36, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LU1, SP_LU2, pC2muxAddr[0], pC2muxAddr[6], settle_delay); }, &midiSender, MIDI_A+48, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_LU1, SP_LU2, pC2muxAddr[0], pC2muxAddr[6], settle_delay); }, &midiSenderDummy, MIDI_A+60, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LU3, SP_LU2, pC2muxAddr[0], pC2muxAddr[6], settle_delay); }, &midiSenderDummy, MIDI_A+72, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LD3, SP_LD2, pC2muxAddr[0], pC2muxAddr[6], settle_delay); }, midiSenders[0], MIDI_A, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_LD3, SP_LD2, pC2muxAddr[0], pC2muxAddr[6], settle_delay); }, midiSenders[1], MIDI_A+12, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LD1, SP_LM, pC2muxAddr[0], pC2muxAddr[6], settle_delay); }, midiSenders[2], MIDI_A+24, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_LD1, SP_LM, pC2muxAddr[0], pC2muxAddr[6], settle_delay); }, midiSenders[3], MIDI_A+36, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LU1, SP_LU2, pC2muxAddr[0], pC2muxAddr[6], settle_delay); }, midiSenders[4], MIDI_A+48, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_LU1, SP_LU2, pC2muxAddr[0], pC2muxAddr[6], settle_delay); }, midiSenders[5], MIDI_A+60, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LU3, SP_RD3, pC2muxAddr[0], pC2muxAddr[6], settle_delay); }, midiSenders[6], MIDI_A+72, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
   // Eb / pc 6
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_RD3, SP_RU2, pC2muxAddr[1], pC2muxAddr[6], settle_delay); }, &midiSenderDummy, MIDI_Eb, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_RD3, SP_RU2, pC2muxAddr[1], pC2muxAddr[6], settle_delay); }, &midiSenderDummy, MIDI_Eb+12, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_RD1, SP_RM, pC2muxAddr[1], pC2muxAddr[6], settle_delay); }, &midiSenderDummy, MIDI_Eb+24, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_RD1, SP_RM, pC2muxAddr[1], pC2muxAddr[6], settle_delay); }, &midiSenderDummy, MIDI_Eb+36, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_RU1, SP_RU2, pC2muxAddr[1], pC2muxAddr[6], settle_delay); }, &midiSender, MIDI_Eb+48, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_RU1, SP_RU2, pC2muxAddr[1], pC2muxAddr[6], settle_delay); }, &midiSenderDummy, MIDI_Eb+60, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_RU3, SP_RU2, pC2muxAddr[1], pC2muxAddr[6], settle_delay); }, &midiSenderDummy, MIDI_Eb+72, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_LU3, SP_RD3, pC2muxAddr[0], pC2muxAddr[6], settle_delay); }, midiSenders[0], MIDI_Eb, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_RD1, SP_RD2, pC2muxAddr[1], pC2muxAddr[6], settle_delay); }, midiSenders[1], MIDI_Eb+12, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_RD1, SP_RD2, pC2muxAddr[1], pC2muxAddr[6], settle_delay); }, midiSenders[2], MIDI_Eb+24, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_RU1, SP_RM, pC2muxAddr[1], pC2muxAddr[6], settle_delay); }, midiSenders[3], MIDI_Eb+36, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_RU1, SP_RM, pC2muxAddr[1], pC2muxAddr[6], settle_delay); }, midiSenders[4], MIDI_Eb+48, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_RU3, SP_RU2, pC2muxAddr[1], pC2muxAddr[6], settle_delay); }, midiSenders[5], MIDI_Eb+60, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_RU3, SP_RU2, pC2muxAddr[1], pC2muxAddr[6], settle_delay); }, midiSenders[6], MIDI_Eb+72, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
   
   // Bb / pc 1
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LD3, SP_LU2, pC2muxAddr[1], pC2muxAddr[7], settle_delay); }, &midiSenderDummy, MIDI_Bb, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_LD3, SP_LU2, pC2muxAddr[1], pC2muxAddr[7], settle_delay); }, &midiSenderDummy, MIDI_Bb+12, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LD1, SP_LM, pC2muxAddr[1], pC2muxAddr[7], settle_delay); }, &midiSenderDummy, MIDI_Bb+24, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_LD1, SP_LM, pC2muxAddr[1], pC2muxAddr[7], settle_delay); }, &midiSenderDummy, MIDI_Bb+36, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LU1, SP_LU2, pC2muxAddr[1], pC2muxAddr[7], settle_delay); }, &midiSender, MIDI_Bb+48, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_LU1, SP_LU2, pC2muxAddr[1], pC2muxAddr[7], settle_delay); }, &midiSenderDummy, MIDI_Bb+60, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LU3, SP_LU2, pC2muxAddr[1], pC2muxAddr[7], settle_delay); }, &midiSenderDummy, MIDI_Bb+72, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-    
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LD3, SP_LD2, pC2muxAddr[1], pC2muxAddr[6], settle_delay); }, midiSenders[0], MIDI_Bb, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_LD3, SP_LD2, pC2muxAddr[1], pC2muxAddr[7], settle_delay); }, midiSenders[1], MIDI_Bb+12, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LD1, SP_LM, pC2muxAddr[1], pC2muxAddr[7], settle_delay); }, midiSenders[2], MIDI_Bb+24, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_LD1, SP_LM, pC2muxAddr[1], pC2muxAddr[7], settle_delay); }, midiSenders[3], MIDI_Bb+36, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LU1, SP_LU2, pC2muxAddr[1], pC2muxAddr[7], settle_delay); }, midiSenders[4], MIDI_Bb+48, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_LU1, SP_LU2, pC2muxAddr[1], pC2muxAddr[7], settle_delay); }, midiSenders[5], MIDI_Bb+60, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LU3, SP_RD3, pC2muxAddr[1], pC2muxAddr[7], settle_delay); }, midiSenders[6], MIDI_Bb+72, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
   // E / pc 7
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_RD3, SP_RU2, pC2muxAddr[2], pC2muxAddr[7], settle_delay); }, &midiSenderDummy, MIDI_E, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_RD3, SP_RU2, pC2muxAddr[2], pC2muxAddr[7], settle_delay); }, &midiSenderDummy, MIDI_E+12, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_RD1, SP_RM, pC2muxAddr[2], pC2muxAddr[7], settle_delay); }, &midiSenderDummy, MIDI_E+24, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_RD1, SP_RM, pC2muxAddr[2], pC2muxAddr[7], settle_delay); }, &midiSenderDummy, MIDI_E+36, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_RU1, SP_RU2, pC2muxAddr[2], pC2muxAddr[7], settle_delay); }, &midiSender, MIDI_E+48, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_RU1, SP_RU2, pC2muxAddr[2], pC2muxAddr[7], settle_delay); }, &midiSenderDummy, MIDI_E+60, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_RU3, SP_RU2, pC2muxAddr[2], pC2muxAddr[7], settle_delay); }, &midiSenderDummy, MIDI_E+72, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_LU3, SP_RD3, pC2muxAddr[1], pC2muxAddr[7], settle_delay); }, midiSenders[0], MIDI_E, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_RD1, SP_RD2, pC2muxAddr[2], pC2muxAddr[7], settle_delay); }, midiSenders[1], MIDI_E+12, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_RD1, SP_RD2, pC2muxAddr[2], pC2muxAddr[7], settle_delay); }, midiSenders[2], MIDI_E+24, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_RU1, SP_RM, pC2muxAddr[2], pC2muxAddr[7], settle_delay); }, midiSenders[3], MIDI_E+36, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_RU1, SP_RM, pC2muxAddr[2], pC2muxAddr[7], settle_delay); }, midiSenders[4], MIDI_E+48, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_RU3, SP_RU2, pC2muxAddr[2], pC2muxAddr[7], settle_delay); }, midiSenders[5], MIDI_E+60, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_RU3, SP_RU2, pC2muxAddr[2], pC2muxAddr[7], settle_delay); }, midiSenders[6], MIDI_E+72, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
   
   // B / pc 2 
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LD3, SP_LU2, pC2muxAddr[2], pC2muxAddr[8], settle_delay); }, &midiSenderDummy, MIDI_B, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_LD3, SP_LU2, pC2muxAddr[2], pC2muxAddr[8], settle_delay); }, &midiSenderDummy, MIDI_B+12, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LD1, SP_LM, pC2muxAddr[2], pC2muxAddr[8], settle_delay); }, &midiSenderDummy, MIDI_B+24, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_LD1, SP_LM, pC2muxAddr[2], pC2muxAddr[8], settle_delay); }, &midiSenderDummy, MIDI_B+36, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LU1, SP_LU2, pC2muxAddr[2], pC2muxAddr[8], settle_delay); }, &midiSender, MIDI_B+48, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_LU1, SP_LU2, pC2muxAddr[2], pC2muxAddr[8], settle_delay); }, &midiSenderDummy, MIDI_B+60, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LU3, SP_LU2, pC2muxAddr[2], pC2muxAddr[8], settle_delay); }, &midiSenderDummy, MIDI_B+72, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  
-  // F / pc 8
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_RD3, SP_RU2, pC2muxAddr[3], pC2muxAddr[8], settle_delay); }, &midiSenderDummy, MIDI_F, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_RD3, SP_RU2, pC2muxAddr[3], pC2muxAddr[8], settle_delay); }, &midiSenderDummy, MIDI_F+12, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_RD1, SP_RM, pC2muxAddr[3], pC2muxAddr[8], settle_delay); }, &midiSenderDummy, MIDI_F+24, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_RD1, SP_RM, pC2muxAddr[3], pC2muxAddr[8], settle_delay); }, &midiSenderDummy, MIDI_F+36, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_RU1, SP_RU2, pC2muxAddr[3], pC2muxAddr[8], settle_delay); }, &midiSender, MIDI_F+48, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_RU1, SP_RU2, pC2muxAddr[3], pC2muxAddr[8], settle_delay); }, &midiSenderDummy, MIDI_F+60, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_RU3, SP_RU2, pC2muxAddr[3], pC2muxAddr[8], settle_delay); }, &midiSenderDummy, MIDI_F+72, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LD3, SP_LD2, pC2muxAddr[2], pC2muxAddr[7], settle_delay); }, midiSenders[0], MIDI_B, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_LD3, SP_LD2, pC2muxAddr[2], pC2muxAddr[8], settle_delay); }, midiSenders[1], MIDI_B+12, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LD1, SP_LM, pC2muxAddr[2], pC2muxAddr[8], settle_delay); }, midiSenders[2], MIDI_B+24, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_LD1, SP_LM, pC2muxAddr[2], pC2muxAddr[8], settle_delay); }, midiSenders[3], MIDI_B+36, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LU1, SP_LU2, pC2muxAddr[2], pC2muxAddr[8], settle_delay); }, midiSenders[4], MIDI_B+48, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_LU1, SP_LU2, pC2muxAddr[2], pC2muxAddr[8], settle_delay); }, midiSenders[5], MIDI_B+60, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LU3, SP_RD3, pC2muxAddr[2], pC2muxAddr[8], settle_delay); }, midiSenders[6], MIDI_B+72, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+    // F / pc 8
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_LU3, SP_RD3, pC2muxAddr[2], pC2muxAddr[8], settle_delay); }, midiSenders[0], MIDI_F, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_RD1, SP_RD2, pC2muxAddr[3], pC2muxAddr[8], settle_delay); }, midiSenders[1], MIDI_F+12, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_RD1, SP_RD2, pC2muxAddr[3], pC2muxAddr[8], settle_delay); }, midiSenders[2], MIDI_F+24, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_RU1, SP_RM, pC2muxAddr[3], pC2muxAddr[8], settle_delay); }, midiSenders[3], MIDI_F+36, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_RU1, SP_RM, pC2muxAddr[3], pC2muxAddr[8], settle_delay); }, midiSenders[4], MIDI_F+48, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_RU3, SP_RU2, pC2muxAddr[3], pC2muxAddr[8], settle_delay); }, midiSenders[5], MIDI_F+60, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_RU3, SP_RU2, pC2muxAddr[3], pC2muxAddr[8], settle_delay); }, midiSenders[6], MIDI_F+72, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
 
   // C / pc 3
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LD3, SP_LU2, pC2muxAddr[3], pC2muxAddr[9], settle_delay); }, &midiSenderDummy, MIDI_C, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_LD3, SP_LU2, pC2muxAddr[3], pC2muxAddr[9], settle_delay); }, &midiSenderDummy, MIDI_C+12, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LD1, SP_LM, pC2muxAddr[3], pC2muxAddr[9], settle_delay); }, &midiSenderDummy, MIDI_C+24, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_LD1, SP_LM, pC2muxAddr[3], pC2muxAddr[9], settle_delay); }, &midiSenderDummy, MIDI_C+36, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LU1, SP_LU2, pC2muxAddr[3], pC2muxAddr[9], settle_delay); }, &midiSender, MIDI_C+48, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_LU1, SP_LU2, pC2muxAddr[3], pC2muxAddr[9], settle_delay); }, &midiSenderDummy, MIDI_C+60, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LU3, SP_LU2, pC2muxAddr[3], pC2muxAddr[9], settle_delay); }, &midiSenderDummy, MIDI_C+72, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  
-  // Gb / pc 9
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_RD3, SP_RU2, pC2muxAddr[4], pC2muxAddr[9], settle_delay); }, &midiSenderDummy, MIDI_Gb, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_RD3, SP_RU2, pC2muxAddr[4], pC2muxAddr[9], settle_delay); }, &midiSenderDummy, MIDI_Gb+12, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_RD1, SP_RM, pC2muxAddr[4], pC2muxAddr[9], settle_delay); }, &midiSenderDummy, MIDI_Gb+24, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_RD1, SP_RM, pC2muxAddr[4], pC2muxAddr[9], settle_delay); }, &midiSenderDummy, MIDI_Gb+36, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_RU1, SP_RU2, pC2muxAddr[4], pC2muxAddr[9], settle_delay); }, &midiSender, MIDI_Gb+48, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_RU1, SP_RU2, pC2muxAddr[4], pC2muxAddr[9], settle_delay); }, &midiSenderDummy, MIDI_Gb+60, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_RU3, SP_RU2, pC2muxAddr[4], pC2muxAddr[9], settle_delay); }, &midiSenderDummy, MIDI_Gb+72, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LD3, SP_LD2, pC2muxAddr[3], pC2muxAddr[8], settle_delay); }, midiSenders[0], MIDI_C, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_LD3, SP_LD2, pC2muxAddr[3], pC2muxAddr[9], settle_delay); }, midiSenders[1], MIDI_C+12, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LD1, SP_LM, pC2muxAddr[3], pC2muxAddr[9], settle_delay); }, midiSenders[2], MIDI_C+24, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_LD1, SP_LM, pC2muxAddr[3], pC2muxAddr[9], settle_delay); }, midiSenders[3], MIDI_C+36, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LU1, SP_LU2, pC2muxAddr[3], pC2muxAddr[9], settle_delay); }, midiSenders[4], MIDI_C+48, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_LU1, SP_LU2, pC2muxAddr[3], pC2muxAddr[9], settle_delay); }, midiSenders[5], MIDI_C+60, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LU3, SP_RD3, pC2muxAddr[3], pC2muxAddr[9], settle_delay); }, midiSenders[6], MIDI_C+72, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+    // Gb / pc 9
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_LU3, SP_RD3, pC2muxAddr[3], pC2muxAddr[9], settle_delay); }, midiSenders[0], MIDI_Gb, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_RD1, SP_RD2, pC2muxAddr[4], pC2muxAddr[9], settle_delay); }, midiSenders[1], MIDI_Gb+12, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_RD1, SP_RD2, pC2muxAddr[4], pC2muxAddr[9], settle_delay); }, midiSenders[2], MIDI_Gb+24, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_RU1, SP_RM, pC2muxAddr[4], pC2muxAddr[9], settle_delay); }, midiSenders[3], MIDI_Gb+36, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_RU1, SP_RM, pC2muxAddr[4], pC2muxAddr[9], settle_delay); }, midiSenders[4], MIDI_Gb+48, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_RU3, SP_RU2, pC2muxAddr[4], pC2muxAddr[9], settle_delay); }, midiSenders[5], MIDI_Gb+60, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_RU3, SP_RU2, pC2muxAddr[4], pC2muxAddr[9], settle_delay); }, midiSenders[6], MIDI_Gb+72, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
   
   // Db / pc 4
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LD3, SP_LU2, pC2muxAddr[4], pC2muxAddr[10], settle_delay); }, &midiSenderDummy, MIDI_Db, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_LD3, SP_LU2, pC2muxAddr[4], pC2muxAddr[10], settle_delay); }, &midiSenderDummy, MIDI_Db+12, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LD1, SP_LM, pC2muxAddr[4], pC2muxAddr[10], settle_delay); }, &midiSenderDummy, MIDI_Db+24, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_LD1, SP_LM, pC2muxAddr[4], pC2muxAddr[10], settle_delay); }, &midiSenderDummy, MIDI_Db+36, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LU1, SP_LU2, pC2muxAddr[4], pC2muxAddr[10], settle_delay); }, &midiSender, MIDI_Db+48, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_LU1, SP_LU2, pC2muxAddr[4], pC2muxAddr[10], settle_delay); }, &midiSenderDummy, MIDI_Db+60, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LU3, SP_LU2, pC2muxAddr[4], pC2muxAddr[10], settle_delay); }, &midiSenderDummy, MIDI_Db+72, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  
-  // G / pc 10
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_RD3, SP_RU2, pC2muxAddr[5], pC2muxAddr[10], settle_delay); }, &midiSenderDummy, MIDI_G, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_RD3, SP_RU2, pC2muxAddr[5], pC2muxAddr[10], settle_delay); }, &midiSenderDummy, MIDI_G+12, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_RD1, SP_RM, pC2muxAddr[5], pC2muxAddr[10], settle_delay); }, &midiSenderDummy, MIDI_G+24, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_RD1, SP_RM, pC2muxAddr[5], pC2muxAddr[10], settle_delay); }, &midiSenderDummy, MIDI_G+36, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_RU1, SP_RU2, pC2muxAddr[5], pC2muxAddr[10], settle_delay); }, &midiSender, MIDI_G+48, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_RU1, SP_RU2, pC2muxAddr[5], pC2muxAddr[10], settle_delay); }, &midiSenderDummy, MIDI_G+60, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_RU3, SP_RU2, pC2muxAddr[5], pC2muxAddr[10], settle_delay); }, &midiSenderDummy, MIDI_G+72, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LD3, SP_LD2, pC2muxAddr[4], pC2muxAddr[9], settle_delay); }, midiSenders[0], MIDI_Db, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_LD3, SP_LD2, pC2muxAddr[4], pC2muxAddr[10], settle_delay); }, midiSenders[1], MIDI_Db+12, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LD1, SP_LM, pC2muxAddr[4], pC2muxAddr[10], settle_delay); }, midiSenders[2], MIDI_Db+24, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_LD1, SP_LM, pC2muxAddr[4], pC2muxAddr[10], settle_delay); }, midiSenders[3], MIDI_Db+36, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LU1, SP_LU2, pC2muxAddr[4], pC2muxAddr[10], settle_delay); }, midiSenders[4], MIDI_Db+48, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_LU1, SP_LU2, pC2muxAddr[4], pC2muxAddr[10], settle_delay); }, midiSenders[5], MIDI_Db+60, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LU3, SP_RD3, pC2muxAddr[4], pC2muxAddr[10], settle_delay); }, midiSenders[6], MIDI_Db+72, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+    // G / pc 10
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_LU3, SP_RD3, pC2muxAddr[4], pC2muxAddr[10], settle_delay); }, midiSenders[0], MIDI_G, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_RD1, SP_RD2, pC2muxAddr[5], pC2muxAddr[10], settle_delay); }, midiSenders[1], MIDI_G+12, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_RD1, SP_RD2, pC2muxAddr[5], pC2muxAddr[10], settle_delay); }, midiSenders[2], MIDI_G+24, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_RU1, SP_RM, pC2muxAddr[5], pC2muxAddr[10], settle_delay); }, midiSenders[3], MIDI_G+36, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_RU1, SP_RM, pC2muxAddr[5], pC2muxAddr[10], settle_delay); }, midiSenders[4], MIDI_G+48, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_RU3, SP_RU2, pC2muxAddr[5], pC2muxAddr[10], settle_delay); }, midiSenders[5], MIDI_G+60, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_RU3, SP_RU2, pC2muxAddr[5], pC2muxAddr[10], settle_delay); }, midiSenders[6], MIDI_G+72, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
   
   // D / pc 5
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LD3, SP_LU2, pC2muxAddr[5], pC2muxAddr[11], settle_delay); }, &midiSenderDummy, MIDI_D, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_LD3, SP_LU2, pC2muxAddr[5], pC2muxAddr[11], settle_delay); }, &midiSenderDummy, MIDI_D+12, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LD1, SP_LM, pC2muxAddr[5], pC2muxAddr[11], settle_delay); }, &midiSenderDummy, MIDI_D+24, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_LD1, SP_LM, pC2muxAddr[5], pC2muxAddr[11], settle_delay); }, &midiSenderDummy, MIDI_D+36, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LU1, SP_LU2, pC2muxAddr[5], pC2muxAddr[11], settle_delay); }, &midiSender, MIDI_D+48, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_LU1, SP_LU2, pC2muxAddr[5], pC2muxAddr[11], settle_delay); }, &midiSenderDummy, MIDI_D+60, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LU3, SP_LU2, pC2muxAddr[5], pC2muxAddr[11], settle_delay); }, &midiSenderDummy, MIDI_D+72, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  
-  // Ab / pc 5
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_RD3, SP_RU2, pC2muxAddr[0], pC2muxAddr[11], settle_delay); }, &midiSenderDummy, MIDI_Ab, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_RD3, SP_RU2, pC2muxAddr[0], pC2muxAddr[11], settle_delay); }, &midiSenderDummy, MIDI_Ab+12, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_RD1, SP_RM, pC2muxAddr[0], pC2muxAddr[11], settle_delay); }, &midiSenderDummy, MIDI_Ab+24, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_RD1, SP_RM, pC2muxAddr[0], pC2muxAddr[11], settle_delay); }, &midiSenderDummy, MIDI_Ab+36, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_RU1, SP_RU2, pC2muxAddr[0], pC2muxAddr[11], settle_delay); }, &midiSender, MIDI_Ab+48, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_RU1, SP_RU2, pC2muxAddr[0], pC2muxAddr[11], settle_delay); }, &midiSenderDummy, MIDI_Ab+60, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
-  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_RU3, SP_RU2, pC2muxAddr[0], pC2muxAddr[11], settle_delay); }, &midiSenderDummy, MIDI_Ab+72, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LD3, SP_LD2, pC2muxAddr[5], pC2muxAddr[10], settle_delay); }, midiSenders[0], MIDI_D, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_LD3, SP_LD2, pC2muxAddr[5], pC2muxAddr[11], settle_delay); }, midiSenders[1], MIDI_D+12, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LD1, SP_LM, pC2muxAddr[5], pC2muxAddr[11], settle_delay); }, midiSenders[2], MIDI_D+24, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_LD1, SP_LM, pC2muxAddr[5], pC2muxAddr[11], settle_delay); }, midiSenders[3], MIDI_D+36, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LU1, SP_LU2, pC2muxAddr[5], pC2muxAddr[11], settle_delay); }, midiSenders[4], MIDI_D+48, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_LU1, SP_LU2, pC2muxAddr[5], pC2muxAddr[11], settle_delay); }, midiSenders[5], MIDI_D+60, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_LU3, SP_RD3, pC2muxAddr[5], pC2muxAddr[11], settle_delay); }, midiSenders[6], MIDI_D+72, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+    // Ab / pc 11
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_LU3, SP_RD3, pC2muxAddr[5], pC2muxAddr[11], settle_delay); }, midiSenders[0], MIDI_Ab, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_RD1, SP_RD2, pC2muxAddr[0], pC2muxAddr[11], settle_delay); }, midiSenders[1], MIDI_Ab+12, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_RD1, SP_RD2, pC2muxAddr[0], pC2muxAddr[11], settle_delay); }, midiSenders[2], MIDI_Ab+24, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_RU1, SP_RM, pC2muxAddr[0], pC2muxAddr[11], settle_delay); }, midiSenders[3], MIDI_Ab+36, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_RU1, SP_RM, pC2muxAddr[0], pC2muxAddr[11], settle_delay); }, midiSenders[4], MIDI_Ab+48, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue1(SP_RU3, SP_RU2, pC2muxAddr[0], pC2muxAddr[11], settle_delay); }, midiSenders[5], MIDI_Ab+60, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
+  { []() -> int { return dualAdcManager.readDualGetAdcValue0(SP_RU3, SP_RU2, pC2muxAddr[0], pC2muxAddr[11], settle_delay); }, midiSenders[6], MIDI_Ab+72, adcValKeyDown, adcValKeyUp , hammer_travel, maxHammerSpeed_m_s},
   
 };
 
